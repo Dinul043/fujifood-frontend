@@ -1,5 +1,7 @@
 'use client'
 
+import { addToCart } from '@/hooks/useCart'
+
 /**
  * BestsellersSection — Customer Favorites.
  *

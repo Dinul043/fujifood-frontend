@@ -1,97 +1,99 @@
 'use client'
 
 /**
- * useCart — Shopping cart state management
- *
- * Cart is stored in localStorage so it persists across page navigations.
- * No login required to add items to cart.
+ * useCart — Global cart state with localStorage persistence.
+ * Hydration-safe: renders 0 on server, syncs from localStorage on client mount.
  */
 import { useState, useEffect, useCallback } from 'react'
-import type { CartItem } from '@/types/order'
 
-const CART_STORAGE_KEY = 'fujifood_cart'
+export interface CartItem {
+  id: number
+  name: string
+  price: number
+  image: string
+  qty: number
+}
 
-function loadCart(): CartItem[] {
+const CART_KEY = 'fujifood_cart'
+
+function loadFromStorage(): CartItem[] {
   if (typeof window === 'undefined') return []
   try {
-    const stored = localStorage.getItem(CART_STORAGE_KEY)
+    const stored = localStorage.getItem(CART_KEY)
     return stored ? JSON.parse(stored) : []
-  } catch {
-    return []
-  }
+  } catch { return [] }
 }
 
-function saveCart(items: CartItem[]) {
+function saveToStorage(items: CartItem[]) {
   if (typeof window === 'undefined') return
-  localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
+  localStorage.setItem(CART_KEY, JSON.stringify(items))
 }
 
+// Global state + listeners for cross-component reactivity
+let _items: CartItem[] = []
+let _listeners: Set<() => void> = new Set()
+let _hydrated = false
+
+function notify() {
+  _listeners.forEach((l) => l())
+}
+
+export function addToCart(item: Omit<CartItem, 'qty'>) {
+  const existing = _items.find((i) => i.id === item.id)
+  if (existing) {
+    _items = _items.map((i) => i.id === item.id ? { ...i, qty: i.qty + 1 } : i)
+  } else {
+    _items = [..._items, { ...item, qty: 1 }]
+  }
+  saveToStorage(_items)
+  notify()
+}
+
+export function removeFromCart(id: number) {
+  _items = _items.filter((i) => i.id !== id)
+  saveToStorage(_items)
+  notify()
+}
+
+export function updateQty(id: number, qty: number) {
+  if (qty <= 0) { removeFromCart(id); return }
+  _items = _items.map((i) => i.id === id ? { ...i, qty } : i)
+  saveToStorage(_items)
+  notify()
+}
+
+export function clearCart() {
+  _items = []
+  saveToStorage(_items)
+  notify()
+}
+
+/**
+ * useCart hook — hydration-safe.
+ * Returns count=0 on first render (matches server).
+ * After mount, syncs with localStorage and re-renders.
+ */
 export function useCart() {
   const [items, setItems] = useState<CartItem[]>([])
-  const [isHydrated, setIsHydrated] = useState(false)
+  const [hydrated, setHydrated] = useState(false)
 
-  // Load from localStorage on mount
   useEffect(() => {
-    setItems(loadCart())
-    setIsHydrated(true)
-  }, [])
-
-  // Persist to localStorage on change
-  useEffect(() => {
-    if (isHydrated) {
-      saveCart(items)
+    // Load from storage on mount
+    if (!_hydrated) {
+      _items = loadFromStorage()
+      _hydrated = true
     }
-  }, [items, isHydrated])
+    setItems([..._items])
+    setHydrated(true)
 
-  const addItem = useCallback((menuItem: CartItem['menuItem'], quantity = 1) => {
-    setItems((prev) => {
-      const existing = prev.find((i) => i.menuItem.id === menuItem.id)
-      if (existing) {
-        return prev.map((i) =>
-          i.menuItem.id === menuItem.id
-            ? { ...i, quantity: i.quantity + quantity }
-            : i
-        )
-      }
-      return [...prev, { menuItem, quantity }]
-    })
+    // Subscribe to changes
+    const listener = () => setItems([..._items])
+    _listeners.add(listener)
+    return () => { _listeners.delete(listener) }
   }, [])
 
-  const removeItem = useCallback((menuItemId: number) => {
-    setItems((prev) => prev.filter((i) => i.menuItem.id !== menuItemId))
-  }, [])
+  const count = items.reduce((sum, i) => sum + i.qty, 0)
+  const total = items.reduce((sum, i) => sum + i.price * i.qty, 0)
 
-  const updateQuantity = useCallback((menuItemId: number, quantity: number) => {
-    if (quantity <= 0) {
-      setItems((prev) => prev.filter((i) => i.menuItem.id !== menuItemId))
-      return
-    }
-    setItems((prev) =>
-      prev.map((i) =>
-        i.menuItem.id === menuItemId ? { ...i, quantity } : i
-      )
-    )
-  }, [])
-
-  const clearCart = useCallback(() => {
-    setItems([])
-  }, [])
-
-  const itemCount = items.reduce((sum, i) => sum + i.quantity, 0)
-
-  const subtotal = items.reduce((sum, i) => {
-    const price = i.menuItem.discount_price ?? i.menuItem.price
-    return sum + price * i.quantity
-  }, 0)
-
-  return {
-    items,
-    itemCount,
-    subtotal,
-    addItem,
-    removeItem,
-    updateQuantity,
-    clearCart,
-    isHydrated,
-  }
+  return { items, count, total, hydrated, addToCart, removeFromCart, updateQty, clearCart }
 }

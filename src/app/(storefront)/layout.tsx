@@ -33,7 +33,7 @@ export default function StorefrontLayout({
       <main className="min-h-screen">{children}</main>
 
       {/* Desktop Footer — hidden on mobile (mobile footer is in MobileHomePage) */}
-      <div className="hidden md:block">
+      <div className="hidden md:block" id="site-footer">
         <Footer
           restaurantName="A2B Veg Restaurant"
           restaurantPhone="+91 98765 43210"

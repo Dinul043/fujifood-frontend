@@ -1,5 +1,7 @@
 'use client'
 
+import { addToCart } from '@/hooks/useCart'
+
 /**
  * MobileHomePage — Complete mobile homepage (320-425px).
  *
@@ -110,11 +112,11 @@ export function MobileHomePage() {
 
         <div className="flex flex-col" style={{ gap: '12px' }}>
           {[
-            { name: 'Ghee Roast Dosa', price: 120, rating: 4.8, img: '/images/food/dish-2.png' },
-            { name: 'Mini Tiffin', price: 99, rating: 4.5, img: '/images/food/dish-3.png' },
-            { name: 'Paneer Butter Masala', price: 160, rating: 4.7, img: '/images/food/dish-4.png' },
-            { name: 'South Indian Thali', price: 169, rating: 4.6, img: '/images/food/dish-5.png' },
-            { name: 'Filter Coffee', price: 50, rating: 4.3, img: '/images/food/dish-6.png' },
+            { id: 101, name: 'Ghee Roast Dosa', price: 120, rating: 4.8, img: '/images/food/dish-2.png' },
+            { id: 102, name: 'Mini Tiffin', price: 99, rating: 4.5, img: '/images/food/dish-3.png' },
+            { id: 103, name: 'Paneer Butter Masala', price: 160, rating: 4.7, img: '/images/food/dish-4.png' },
+            { id: 104, name: 'South Indian Thali', price: 169, rating: 4.6, img: '/images/food/dish-5.png' },
+            { id: 105, name: 'Filter Coffee', price: 50, rating: 4.3, img: '/images/food/dish-6.png' },
           ].map((item) => (
             <div
               key={item.name}
@@ -142,6 +144,7 @@ export function MobileHomePage() {
                 </div>
               </div>
               <button
+                onClick={() => addToCart({ id: item.id, name: item.name, price: item.price, image: item.img })}
                 className="flex-shrink-0 flex items-center justify-center rounded-full bg-[#C8964B] text-white"
                 style={{ width: '32px', height: '32px' }}
                 aria-label={`Add ${item.name}`}

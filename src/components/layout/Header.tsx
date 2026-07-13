@@ -1,13 +1,28 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
+import { useCart } from '@/hooks/useCart'
 
 /**
  * Header — Premium restaurant navigation.
- * Includes search overlay that slides down on click.
+ * Includes search overlay and active nav detection.
  */
 export function Header() {
   const [searchOpen, setSearchOpen] = useState(false)
+  const { count } = useCart()
+  const pathname = usePathname()
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  useEffect(() => {
+    setIsLoggedIn(document.cookie.includes('fujifood_access_token'))
+  }, [])
+
+  const navLinks = [
+    { label: 'Home', href: '/' },
+    { label: 'Menu', href: '/menu' },
+    { label: 'About Us', href: '#footer' },
+  ]
 
   return (
     <>
@@ -59,42 +74,47 @@ export function Header() {
         {/* ─── Center: Navigation ────────────────────────────── */}
         <nav aria-label="Main navigation">
           <ul className="flex items-center" style={{ gap: '48px' }}>
-            <li>
-              <a href="/" className="text-[14px] font-medium text-white transition-colors duration-200 hover:text-[#C8964B]">
-                Home
-              </a>
-            </li>
-            <li>
-              <a href="/menu" className="text-[14px] font-medium text-[#999] transition-colors duration-200 hover:text-[#C8964B]">
-                Menu
-              </a>
-            </li>
-            <li>
-              <a href="#offers" className="text-[14px] font-medium text-[#999] transition-colors duration-200 hover:text-[#C8964B]">
-                Offers
-              </a>
-            </li>
-            <li>
-              <a href="#about" className="text-[14px] font-medium text-[#999] transition-colors duration-200 hover:text-[#C8964B]">
-                About Us
-              </a>
-            </li>
+            {navLinks.map((link) => {
+              const isActive = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href)
+              const isHashLink = link.href.startsWith('#')
+              return (
+                <li key={link.href}>
+                  <a
+                    href={link.href}
+                    onClick={isHashLink ? (e) => {
+                      e.preventDefault()
+                      const el = document.getElementById('site-footer')
+                      if (el) {
+                        const top = el.getBoundingClientRect().top + window.scrollY - 88
+                        window.scrollTo({ top, behavior: 'smooth' })
+                      }
+                    } : undefined}
+                    className="transition-colors duration-200 hover:text-[#C8964B]"
+                    style={{ fontSize: '14px', fontWeight: 500, color: isActive && !isHashLink ? '#FFFFFF' : '#999' }}
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              )
+            })}
           </ul>
         </nav>
 
         {/* ─── Right: Search + Cart + Login ──────────────────── */}
         <div className="flex items-center">
-          {/* Search */}
-          <button
-            className="text-[#999] hover:text-white transition-colors duration-200"
-            aria-label="Search menu"
-            style={{ marginRight: '32px' }}
-            onClick={() => setSearchOpen(!searchOpen)}
-          >
-            <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
-            </svg>
-          </button>
+          {/* Search — only show on homepage */}
+          {pathname === '/' && (
+            <button
+              className="text-[#999] hover:text-white transition-colors duration-200"
+              aria-label="Search menu"
+              style={{ marginRight: '32px' }}
+              onClick={() => setSearchOpen(!searchOpen)}
+            >
+              <svg className="w-[22px] h-[22px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+              </svg>
+            </button>
+          )}
 
           {/* Cart */}
           <a
@@ -107,23 +127,26 @@ export function Header() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 0 1-1.12-1.243l1.264-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" />
             </svg>
             {/* Cart count badge */}
-            <span className="absolute -top-[8px] -right-[8px] min-w-[18px] h-[18px] rounded-full bg-[#C8964B] text-white text-[10px] font-bold flex items-center justify-center px-[5px]">
-              0
+            <span className="absolute -top-[8px] -right-[8px] min-w-[18px] h-[18px] rounded-full bg-[#C8964B] text-white text-[10px] font-bold flex items-center justify-center px-[5px]" suppressHydrationWarning>
+              {count}
             </span>
           </a>
 
-          {/* Login / Sign up button */}
+          {/* Login / Sign out */}
           <a
-            href="/login"
-            className="inline-flex items-center justify-center whitespace-nowrap text-[13px] font-semibold text-[#C8964B] border-[1.5px] border-[#C8964B] hover:bg-[#C8964B] hover:text-white transition-all duration-200"
-            style={{
-              height: '48px',
-              paddingLeft: '24px',
-              paddingRight: '24px',
-              borderRadius: '12px',
+            href={isLoggedIn ? '#' : '/login'}
+            onClick={(e) => {
+              if (isLoggedIn) {
+                e.preventDefault()
+                document.cookie = 'fujifood_access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+                document.cookie = 'fujifood_refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+                window.location.href = '/'
+              }
             }}
+            className="inline-flex items-center justify-center whitespace-nowrap text-[13px] font-semibold text-[#C8964B] border-[1.5px] border-[#C8964B] hover:bg-[#C8964B] hover:text-white transition-all duration-200"
+            style={{ height: '48px', paddingLeft: '24px', paddingRight: '24px', borderRadius: '12px' }}
           >
-            Login / Sign up
+            {isLoggedIn ? 'Sign out' : 'Login / Sign up'}
           </a>
         </div>
       </div>
@@ -136,8 +159,8 @@ export function Header() {
         style={{ top: '88px' }}
       >
         <div className="mx-auto" style={{ maxWidth: '1280px', padding: '16px 48px' }}>
-          <div className="relative">
-            <svg className="absolute left-16 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#888] pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <div className="relative flex items-center">
+            <svg className="absolute w-[18px] h-[18px] text-[#888] pointer-events-none" style={{ left: '16px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
               <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
             </svg>
             <input
@@ -146,11 +169,20 @@ export function Header() {
               autoFocus
               className="w-full bg-[#252525] text-white placeholder-[#666] border border-[#333] outline-none focus:border-[#C8964B] transition-colors"
               style={{ height: '48px', paddingLeft: '48px', paddingRight: '48px', borderRadius: '12px', fontSize: '15px' }}
-              onKeyDown={(e) => { if (e.key === 'Escape') setSearchOpen(false) }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setSearchOpen(false)
+                if (e.key === 'Enter') {
+                  const val = (e.target as HTMLInputElement).value
+                  if (val.trim()) {
+                    window.location.href = `/menu?search=${encodeURIComponent(val.trim())}`
+                  }
+                }
+              }}
             />
             <button
               onClick={() => setSearchOpen(false)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#888] hover:text-white transition-colors"
+              className="absolute text-[#888] hover:text-white transition-colors"
+              style={{ right: '16px' }}
               aria-label="Close search"
             >
               <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

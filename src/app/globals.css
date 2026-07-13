@@ -80,16 +80,16 @@
   --font-heading:       'Plus Jakarta Sans', ui-sans-serif, sans-serif;
   --font-body:          'Inter',             ui-sans-serif, sans-serif;
 
-  --brand-primary:      #E85D8E;
-  --brand-primary-dark: #c2185b;
-  --brand-secondary:    #18181B;
-  --brand-accent:       #F59E0B;
+  --brand-primary:      #C8964B;
+  --brand-primary-dark: #A67B3D;
+  --brand-secondary:    #1A1A1A;
+  --brand-accent:       #D4A853;
 
-  --bg:                 #FAFAFA;
+  --bg:                 #FAFAF8;
   --surface:            #FFFFFF;
-  --border-color:       #E5E5E5;
-  --text-primary:       #171717;
-  --text-muted:         #737373;
+  --border-color:       #E8E4DE;
+  --text-primary:       #1A1A1A;
+  --text-muted:         #6B6B6B;
 
   --r-sm:   4px;
   --r-md:   8px;
@@ -123,6 +123,13 @@ body {
   line-height: 1.6;
   min-height: 100svh;
   overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+body > * {
+  width: 100%;
 }
 
 /* ── Typography ───────────────────────────────────────────────── */
@@ -161,6 +168,11 @@ h1, h2, h3, h4, h5, h6 {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
+}
+
+/* ── Safe area for bottom nav on iOS ──────────────────────────── */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* ── Animation keyframes ─────────────────────────────────────── */

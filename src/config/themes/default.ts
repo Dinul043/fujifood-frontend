@@ -10,15 +10,15 @@ export const defaultTheme: ThemeConfig = {
   description: 'Clean modern design suitable for most restaurants',
 
   colors: {
-    primary:     '#E85D8E',
-    primaryDark: '#c2185b',
-    secondary:   '#18181B',
-    accent:      '#F59E0B',
-    background:  '#FAFAFA',
+    primary:     '#C8964B',
+    primaryDark: '#A67B3D',
+    secondary:   '#1A1A1A',
+    accent:      '#D4A853',
+    background:  '#FAFAF8',
     surface:     '#FFFFFF',
-    border:      '#E5E5E5',
-    textPrimary: '#171717',
-    textMuted:   '#737373',
+    border:      '#E8E4DE',
+    textPrimary: '#1A1A1A',
+    textMuted:   '#6B6B6B',
   },
 
   typography: {

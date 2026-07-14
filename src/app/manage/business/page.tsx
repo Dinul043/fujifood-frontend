@@ -104,6 +104,44 @@ export default function BusinessPage() {
 
       {/* Basic Info */}
       <div style={{ background: '#fff', border: '1px solid #F0F0F0', borderRadius: 16, padding: 24, marginBottom: 24 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1A1A1A', marginBottom: 16 }}>Restaurant Location</h3>
+        <p style={{ fontSize: 13, color: '#888', marginBottom: 16 }}>Set your restaurant&apos;s exact location. This is used to calculate delivery radius.</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => {
+              if (!navigator.geolocation) return
+              navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                  updateField('latitude', pos.coords.latitude)
+                  updateField('longitude', pos.coords.longitude)
+                },
+                () => alert('Location access denied'),
+                { enableHighAccuracy: true }
+              )
+            }}
+            style={{ height: 40, padding: '0 20px', borderRadius: 10, border: '1px solid #C8964B', background: '#FDF6EC', color: '#C8964B', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+          >
+            <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0115 0z" /></svg>
+            Detect Restaurant Location
+          </button>
+          {restaurant.latitude && restaurant.longitude && (
+            <span style={{ fontSize: 12, color: '#16A34A', fontWeight: 500 }}>Location set: {restaurant.latitude?.toFixed(4)}, {restaurant.longitude?.toFixed(4)}</span>
+          )}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: '#666', marginBottom: 6, display: 'block' }}>Latitude</label>
+            <input style={inputStyle} type="number" step="0.0001" value={restaurant.latitude || ''} onChange={e => updateField('latitude', parseFloat(e.target.value) || null)} placeholder="13.0878" />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 500, color: '#666', marginBottom: 6, display: 'block' }}>Longitude</label>
+            <input style={inputStyle} type="number" step="0.0001" value={restaurant.longitude || ''} onChange={e => updateField('longitude', parseFloat(e.target.value) || null)} placeholder="80.2215" />
+          </div>
+        </div>
+      </div>
+
+      {/* Restaurant Info */}
+      <div style={{ background: '#fff', border: '1px solid #F0F0F0', borderRadius: 16, padding: 24, marginBottom: 24 }}>
         <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1A1A1A', marginBottom: 16 }}>Restaurant Info</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 16 }}>
           {[

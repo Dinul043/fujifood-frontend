@@ -24,6 +24,32 @@ export default function CheckoutPage() {
   const deliveryFee = total >= 299 ? 0 : 30
   const grandTotal = total + deliveryFee
 
+  // Geolocation
+  const [geoLoading, setGeoLoading] = useState(false)
+  const [deliveryWarning, setDeliveryWarning] = useState('')
+  const [lat, setLat] = useState<number | null>(null)
+  const [lng, setLng] = useState<number | null>(null)
+
+  const handleUseLocation = () => {
+    if (!navigator.geolocation) { setError('Geolocation not supported'); return }
+    setGeoLoading(true); setDeliveryWarning('')
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords
+        setLat(latitude); setLng(longitude)
+        try { const { data } = await api.post('/geo/check-delivery', { latitude, longitude }); if (!data.deliverable) setDeliveryWarning(data.message) } catch {}
+        try {
+          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`)
+          const g = await r.json()
+          if (g.address) { setLine1(g.address.road || g.address.neighbourhood || ''); setLine2(g.address.suburb || ''); setCity(g.address.city || g.address.town || ''); setPincode(g.address.postcode || '') }
+        } catch {}
+        setGeoLoading(false)
+      },
+      () => { setError('Location denied. Enter manually.'); setGeoLoading(false) },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
+
   // Redirect if cart empty
   useEffect(() => {
     if (typeof window !== 'undefined' && items.length === 0) {
@@ -121,6 +147,15 @@ export default function CheckoutPage() {
               {/* Delivery Address */}
               <div className="bg-white" style={{ padding: '32px', borderRadius: '20px', border: '1px solid #EEEAE5' }}>
                 <h3 className="font-heading font-bold text-[#1A1A1A]" style={{ fontSize: '18px', marginBottom: '24px' }}>Delivery Address</h3>
+                {/* Use Location button + warning */}
+                <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+                  <button onClick={handleUseLocation} disabled={geoLoading} style={{ height: 36, padding: '0 16px', borderRadius: 10, border: '1px solid #C8964B', background: '#FDF6EC', color: '#C8964B', fontSize: 13, fontWeight: 600, cursor: geoLoading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0115 0z" /></svg>
+                    {geoLoading ? 'Detecting...' : 'Use My Location'}
+                  </button>
+                  <span style={{ fontSize: 12, color: '#AAA' }}>or enter address manually</span>
+                </div>
+                {deliveryWarning && <div style={{ marginBottom: '16px', padding: '10px 14px', borderRadius: 10, background: '#FFF7ED', border: '1px solid #FDECD0' }}><p style={{ fontSize: 12, color: '#D97706', fontWeight: 500 }}>{deliveryWarning}</p><p style={{ fontSize: 11, color: '#AAA', marginTop: 4 }}>You can still place the order for someone within our delivery area.</p></div>}
                 <div className="grid grid-cols-2" style={{ gap: '16px' }}>
                   <div className="col-span-2">
                     <label className="block font-medium text-[#1A1A1A]" style={{ fontSize: '12px', marginBottom: '6px' }}>Address Line 1 *</label>
@@ -182,6 +217,8 @@ export default function CheckoutPage() {
           {error && <div style={{ marginBottom: '16px', padding: '10px 14px', borderRadius: '8px', background: '#FEF2F2', border: '1px solid #FECACA' }}><p className="text-[#DC2626]" style={{ fontSize: '12px', fontWeight: 500 }}>{error}</p></div>}
           <div className="bg-white" style={{ padding: '20px', borderRadius: '16px', border: '1px solid #EEEAE5', marginBottom: '16px' }}>
             <h3 className="font-semibold text-[#1A1A1A]" style={{ fontSize: '15px', marginBottom: '16px' }}>Delivery Address</h3>
+            <button onClick={handleUseLocation} disabled={geoLoading} style={{ marginBottom: 12, width: '100%', height: 40, borderRadius: 10, border: '1px solid #C8964B', background: '#FDF6EC', color: '#C8964B', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>{geoLoading ? 'Detecting...' : '📍 Use My Location'}</button>
+            {deliveryWarning && <p style={{ fontSize: 11, color: '#D97706', marginBottom: 12, padding: '8px 12px', borderRadius: 8, background: '#FFF7ED' }}>{deliveryWarning}</p>}
             <div className="flex flex-col" style={{ gap: '12px' }}>
               <input value={line1} onChange={(e) => setLine1(e.target.value)} placeholder="House/Flat, Street *" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '40px', borderRadius: '10px', fontSize: '13px', paddingLeft: '12px' }} />
               <input value={line2} onChange={(e) => setLine2(e.target.value)} placeholder="Landmark, Area" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '40px', borderRadius: '10px', fontSize: '13px', paddingLeft: '12px' }} />

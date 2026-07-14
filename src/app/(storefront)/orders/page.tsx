@@ -87,11 +87,54 @@ export default function OrdersPage() {
                         <span className="font-bold text-[#1A1A1A]" style={{ fontSize: '18px' }}>&#8377;{order.total_amount}</span>
                       </div>
                     </div>
-                    <div className="flex flex-wrap" style={{ gap: '8px' }}>
+                    {/* Items list */}
+                    <div style={{ marginBottom: '12px' }}>
                       {order.items.map((item, idx) => (
-                        <span key={idx} className="text-[#666] bg-[#F5F5F0]" style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '6px' }}>{item.item_name} x{item.quantity}</span>
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0' }}>
+                          <img src={`/images/food/dish-${((item.menu_item_id || idx) % 10) + 1}.png`} alt={item.item_name} style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover' }} />
+                          <span style={{ fontSize: '13px', color: '#1A1A1A' }}>{item.item_name} <span style={{ color: '#AAA' }}>x{item.quantity}</span></span>
+                        </div>
                       ))}
                     </div>
+                    {/* Status message */}
+                    {order.status === 'delivered' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '8px', background: '#F0FDF4' }}>
+                        <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="#16A34A" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <span style={{ fontSize: '12px', fontWeight: 500, color: '#16A34A' }}>Order delivered successfully</span>
+                      </div>
+                    )}
+                    {order.status === 'preparing' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '8px', background: '#EFF6FF' }}>
+                        <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <span style={{ fontSize: '12px', fontWeight: 500, color: '#2563EB' }}>Your food is being prepared</span>
+                      </div>
+                    )}
+                    {order.status === 'confirmed' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '8px', background: '#EFF6FF' }}>
+                        <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <span style={{ fontSize: '12px', fontWeight: 500, color: '#2563EB' }}>Order confirmed by restaurant</span>
+                      </div>
+                    )}
+                    {/* Cancel button for pending/confirmed orders */}
+                    {(order.status === 'pending' || order.status === 'confirmed') && (
+                      <button
+                        onClick={async () => {
+                          if (!confirm('Are you sure you want to cancel this order?')) return
+                          try {
+                            await api.post(`/orders/my-orders/${order.id}/cancel`)
+                            window.location.reload()
+                          } catch (e: any) { alert(e.response?.data?.detail || 'Cannot cancel') }
+                        }}
+                        style={{ marginTop: 8, fontSize: 12, color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 500 }}
+                      >
+                        Cancel Order
+                      </button>
+                    )}
+                    {order.status === 'cancelled' && order.payment_status === 'refunded' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '8px', background: '#FEF2F2', marginTop: 8 }}>
+                        <span style={{ fontSize: '12px', fontWeight: 500, color: '#DC2626' }}>Refund processed</span>
+                      </div>
+                    )}
                   </div>
                 )
               })}

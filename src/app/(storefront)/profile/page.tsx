@@ -106,6 +106,9 @@ export default function ProfilePage() {
               )}
 
               <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid #F0F0F0' }}>
+                {user.role === 'restaurant_admin' && (
+                  <a href="/manage" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: '40px', padding: '0 20px', borderRadius: '10px', fontSize: '13px', fontWeight: 600, background: '#C8964B', color: '#fff', textDecoration: 'none', marginRight: '12px', transition: 'all 0.15s' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#B5843F' }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#C8964B' }}>Manage Restaurant</a>
+                )}
                 <button onClick={handleLogout} className="font-semibold text-[#DC2626] hover:bg-[#FEF2F2] transition-all" style={{ height: '40px', paddingLeft: '20px', paddingRight: '20px', borderRadius: '10px', fontSize: '13px', border: '1px solid #FECACA' }}>Sign Out</button>
               </div>
             </div>

@@ -41,17 +41,67 @@ export default function CheckoutPage() {
 
     setLoading(true)
     try {
+      // Step 1: Create order
       const orderData = {
         items: items.map((i) => ({ menu_item_id: i.id, quantity: i.qty })),
         delivery_address: { line1, line2, city, state, pincode },
         payment_method: paymentMethod,
       }
-      const { data } = await api.post('/orders/place', orderData)
-      clearCart()
-      window.location.href = `/orders?new=${data.order_number}`
+      const { data: order } = await api.post('/orders/place', orderData)
+
+      // Step 2: If online payment, open Razorpay
+      if (paymentMethod === 'online') {
+        const { data: rzp } = await api.post('/payment/create-order', { order_id: order.id })
+
+        // Load Razorpay script if not loaded
+        if (!(window as any).Razorpay) {
+          const script = document.createElement('script')
+          script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+          document.body.appendChild(script)
+          await new Promise(resolve => script.onload = resolve)
+        }
+
+        const options = {
+          key: rzp.razorpay_key_id,
+          amount: rzp.amount,
+          currency: rzp.currency,
+          name: 'A2B Veg Restaurant',
+          description: `Order #${rzp.order_number}`,
+          order_id: rzp.razorpay_order_id,
+          handler: async (response: any) => {
+            // Verify payment
+            try {
+              await api.post('/payment/verify', {
+                order_id: order.id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              })
+              clearCart()
+              window.location.href = `/orders?new=${order.order_number}`
+            } catch {
+              setError('Payment verification failed. Contact support.')
+              setLoading(false)
+            }
+          },
+          prefill: {},
+          theme: { color: '#C8964B' },
+          modal: {
+            ondismiss: () => { setError('Payment cancelled'); setLoading(false) }
+          }
+        }
+
+        const razorpay = new (window as any).Razorpay(options)
+        razorpay.open()
+      } else {
+        // COD — order is already placed
+        clearCart()
+        window.location.href = `/orders?new=${order.order_number}`
+      }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to place order. Please try again.')
-    } finally { setLoading(false) }
+      setLoading(false)
+    }
   }
 
   if (items.length === 0) return null

@@ -48,7 +48,7 @@ export default function ManageLayout({ children }: { children: React.ReactNode }
           </div>
           <div style={{ flex: 1, padding: '16px 12px', overflow: 'auto' }}><NavItems /></div>
           <div style={{ padding: '12px 12px', borderTop: '1px solid #F0F0F0' }}>
-            <a href="/" style={{ fontSize: 12, color: '#999', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px' }}>
+            <a href="/" style={{ fontSize: 12, color: '#999', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', borderRadius: 8, transition: 'all 0.15s' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#C8964B'; (e.currentTarget as HTMLElement).style.background = '#FDF6EC' }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#999'; (e.currentTarget as HTMLElement).style.background = 'transparent' }}>
               <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>
               View Storefront
             </a>

@@ -135,6 +135,16 @@ export default function OrdersPage() {
               </div>
 
               {/* Order details */}
+              <div style={{ marginBottom: 12 }}>
+                {order.items?.map((item: any, idx: number) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
+                    <img src={`/images/food/dish-${((item.menu_item_id || idx) % 10) + 1}.png`} alt={item.item_name} style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover' }} />
+                    <span style={{ fontSize: 13, color: '#1A1A1A', flex: 1 }}>{item.item_name} <span style={{ color: '#AAA' }}>x{item.quantity}</span></span>
+                    <span style={{ fontSize: 12, color: '#888' }}>₹{item.line_total}</span>
+                  </div>
+                ))}
+              </div>
+
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <span style={{ fontSize: 13, color: '#888' }}>{order.items?.length || 0} item{(order.items?.length || 0) !== 1 ? 's' : ''}</span>
                 <span style={{ fontSize: 18, fontWeight: 700, color: '#1A1A1A' }}>₹{order.total_amount}</span>

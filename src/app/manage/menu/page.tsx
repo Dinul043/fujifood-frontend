@@ -8,8 +8,10 @@ export default function MenuPage() {
   const [categories, setCategories] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ name: '', price: '', category_id: '', food_type: 'veg' })
+  const [form, setForm] = useState({ name: '', price: '', category_id: '', food_type: 'veg', image_url: '' })
   const [submitting, setSubmitting] = useState(false)
+  const [newCatName, setNewCatName] = useState('')
+  const [addingCat, setAddingCat] = useState(false)
 
   const fetchData = async () => {
     try {
@@ -53,8 +55,9 @@ export default function MenuPage() {
         price: parseFloat(form.price),
         category_id: parseInt(form.category_id),
         food_type: form.food_type,
+        image_url: form.image_url || null,
       })
-      setForm({ name: '', price: '', category_id: '', food_type: 'veg' })
+      setForm({ name: '', price: '', category_id: '', food_type: 'veg', image_url: '' })
       setShowForm(false)
       await fetchData()
     } catch {}
@@ -105,6 +108,20 @@ export default function MenuPage() {
         </button>
       </div>
 
+      {/* Categories management */}
+      <div style={{ background: '#fff', border: '1px solid #F0F0F0', borderRadius: 16, padding: 20, marginBottom: 24 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 600, color: '#1A1A1A', marginBottom: 12 }}>Categories</h3>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+          {categories.map((cat: any) => (
+            <span key={cat.id} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 8, background: '#F5F3EF', color: '#1A1A1A', fontWeight: 500 }}>{cat.name}</span>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="New category name" style={{ ...inputStyle, flex: 1 }} />
+          <button onClick={async () => { if (!newCatName.trim()) return; setAddingCat(true); try { await api.post('/menu/manage/categories', { name: newCatName }); setNewCatName(''); await fetchData() } catch {} finally { setAddingCat(false) } }} disabled={addingCat} style={{ height: 40, padding: '0 16px', borderRadius: 10, border: 'none', background: '#C8964B', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>{addingCat ? '...' : '+ Add'}</button>
+        </div>
+      </div>
+
       {/* Add Item Form */}
       {showForm && (
         <div style={{ background: '#fff', border: '1px solid #F0F0F0', borderRadius: 16, padding: 24, marginBottom: 24 }}>
@@ -132,6 +149,10 @@ export default function MenuPage() {
                 <option value="non_veg">Non-Veg</option>
                 <option value="egg">Egg</option>
               </select>
+            </div>
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 500, color: '#666', marginBottom: 6, display: 'block' }}>Image URL (optional)</label>
+              <input style={inputStyle} value={form.image_url} onChange={e => setForm(p => ({ ...p, image_url: e.target.value }))} placeholder="https://... or /images/food/dish.png" />
             </div>
             <div style={{ display: 'flex', alignItems: 'flex-end' }}>
               <button

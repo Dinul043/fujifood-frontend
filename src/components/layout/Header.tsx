@@ -53,7 +53,20 @@ export function Header() {
           <div className="w-[1px] h-[40px] bg-[#333]" style={{ marginRight: '32px' }} />
 
           {/* Location selector */}
-          <button className="flex items-center gap-[12px] group" style={{ marginRight: '80px' }}>
+          <button className="flex items-center gap-[12px] group" style={{ marginRight: '80px' }} onClick={() => {
+            if (navigator.geolocation) {
+              navigator.geolocation.getCurrentPosition(async (pos) => {
+                try {
+                  const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`)
+                  const g = await r.json()
+                  const area = g.address?.suburb || g.address?.neighbourhood || g.address?.city || ''
+                  const city = g.address?.city || g.address?.town || ''
+                  const loc = document.getElementById('header-location')
+                  if (loc) loc.textContent = area ? `${area}, ${city}` : `${city}`
+                } catch {}
+              }, () => {}, { enableHighAccuracy: true })
+            }
+          }}>
             <svg className="w-[18px] h-[18px] text-[#C8964B] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0 1 15 0Z" />
@@ -61,7 +74,7 @@ export function Header() {
             <div className="flex flex-col leading-tight">
               <span className="text-[11px] text-[#888]">Delivering to</span>
               <div className="flex items-center gap-[6px]">
-                <span className="text-[14px] text-white font-medium group-hover:text-[#C8964B] transition-colors duration-200">
+                <span id="header-location" className="text-[14px] text-white font-medium group-hover:text-[#C8964B] transition-colors duration-200">
                   Anna Nagar, Chennai
                 </span>
                 <svg className="w-[12px] h-[12px] text-[#666]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">

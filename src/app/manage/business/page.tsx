@@ -146,10 +146,11 @@ export default function BusinessPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 16 }}>
           {[
             { key: 'name', label: 'Restaurant Name', type: 'text' },
-            { key: 'cuisine', label: 'Cuisine Type', type: 'text' },
+            { key: 'cuisine_type', label: 'Cuisine Type', type: 'text' },
             { key: 'phone', label: 'Phone', type: 'tel' },
             { key: 'email', label: 'Email', type: 'email' },
-            { key: 'address', label: 'Address', type: 'text' },
+            { key: 'address_line1', label: 'Address Line 1', type: 'text' },
+            { key: 'address_line2', label: 'Address Line 2', type: 'text' },
             { key: 'city', label: 'City', type: 'text' },
             { key: 'pincode', label: 'Pincode', type: 'text' },
           ].map(field => (
@@ -181,11 +182,11 @@ export default function BusinessPage() {
         <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1A1A1A', marginBottom: 16 }}>Delivery Settings</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
           {[
-            { key: 'delivery_radius', label: 'Delivery Radius (km)', type: 'number' },
+            { key: 'delivery_radius_km', label: 'Delivery Radius (km)', type: 'number' },
             { key: 'min_order_amount', label: 'Min Order Amount (₹)', type: 'number' },
             { key: 'delivery_fee', label: 'Delivery Fee (₹)', type: 'number' },
             { key: 'free_delivery_above', label: 'Free Delivery Above (₹)', type: 'number' },
-            { key: 'avg_delivery_time', label: 'Avg Delivery Time (min)', type: 'number' },
+            { key: 'avg_delivery_time_mins', label: 'Avg Delivery Time (min)', type: 'number' },
           ].map(field => (
             <div key={field.key}>
               <label style={{ fontSize: 12, fontWeight: 500, color: '#666', marginBottom: 6, display: 'block' }}>{field.label}</label>

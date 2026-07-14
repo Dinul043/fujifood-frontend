@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
 import api from '@/lib/api'
 
 /**
@@ -23,12 +22,15 @@ const statusColors: Record<string, { bg: string; text: string }> = {
 }
 
 export default function OrdersPage() {
-  const searchParams = useSearchParams()
-  const newOrder = searchParams.get('new')
+  const [newOrder, setNewOrder] = useState<string | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Get new order param from URL (without useSearchParams)
+    const params = new URLSearchParams(window.location.search)
+    setNewOrder(params.get('new'))
+
     async function fetchOrders() {
       try {
         const { data } = await api.get('/orders/my-orders')

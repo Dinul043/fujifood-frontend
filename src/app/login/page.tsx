@@ -86,9 +86,13 @@ export default function LoginPage() {
     if (!phone.trim() || phone.length < 10) { setError('Enter a valid phone number'); return }
     if (!password.trim() || password.length < 6) { setError('Password must be at least 6 characters'); return }
 
-    // TODO: Call API to update user profile with phone + password
-    // For now, redirect to home (profile update API will be built next)
-    window.location.href = '/'
+    setLoading(true)
+    try {
+      await api.patch(`/auth/profile?name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}`)
+      window.location.href = '/'
+    } catch (err: any) {
+      setError(err.response?.data?.detail || 'Failed to save profile')
+    } finally { setLoading(false) }
   }
 
   const handleAdminLogin = async () => {
@@ -99,7 +103,7 @@ export default function LoginPage() {
     try {
       const { data } = await api.post('/auth/admin/login', { phone, password, tenant_slug: TENANT_SLUG })
       setTokens(data.access_token, data.refresh_token)
-      window.location.href = '/'
+      window.location.href = '/manage'
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Invalid credentials')
     } finally { setLoading(false) }

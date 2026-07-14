@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useSearchParams } from 'next/navigation'
 import { addToCart } from '@/hooks/useCart'
 import { useToast } from '@/components/ui/Toast'
 import { useAuthGate } from '@/components/ui/AuthGate'
@@ -25,9 +24,8 @@ const staticMenuItems = [
 interface MenuItem { id: number; name: string; price: number; category: string; rating: number; img: string; veg: boolean; bestseller: boolean }
 
 export default function MenuPage() {
-  const searchParams = useSearchParams()
   const [activeCategory, setActiveCategory] = useState('All')
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '')
+  const [searchQuery, setSearchQuery] = useState('')
   const resultsRef = useRef<HTMLDivElement>(null)
   const { showToast } = useToast()
   const { requireAuth } = useAuthGate()
@@ -37,6 +35,14 @@ export default function MenuPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Read search param from URL
+    const params = new URLSearchParams(window.location.search)
+    const fromHeader = params.get('search')
+    if (fromHeader) {
+      setSearchQuery(fromHeader)
+      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300)
+    }
+
     let cancelled = false
     async function fetchMenu() {
       try {
@@ -58,11 +64,6 @@ export default function MenuPage() {
     fetchMenu()
     return () => { cancelled = true }
   }, [])
-
-  useEffect(() => {
-    const fromHeader = searchParams.get('search')
-    if (fromHeader) { setSearchQuery(fromHeader); setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100) }
-  }, [searchParams])
 
   const handleAddToCart = (item: MenuItem) => {
     if (!requireAuth('add to cart')) return

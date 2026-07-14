@@ -13,6 +13,7 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState('cod')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [orderSuccess, setOrderSuccess] = useState<{ orderNumber: string } | null>(null)
 
   // Address fields
   const [line1, setLine1] = useState('')
@@ -116,7 +117,8 @@ export default function CheckoutPage() {
                 razorpay_signature: response.razorpay_signature,
               })
               clearCart()
-              window.location.href = `/orders?new=${order.order_number}`
+              setOrderSuccess({ orderNumber: order.order_number })
+              setLoading(false)
             } catch {
               setError('Payment verification failed. Contact support.')
               setLoading(false)
@@ -132,9 +134,10 @@ export default function CheckoutPage() {
         const razorpay = new (window as any).Razorpay(options)
         razorpay.open()
       } else {
-        // COD — order is already placed
+        // COD — order is already placed, show success
         clearCart()
-        window.location.href = `/orders?new=${order.order_number}`
+        setOrderSuccess({ orderNumber: order.order_number })
+        setLoading(false)
       }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to place order. Please try again.')
@@ -142,7 +145,33 @@ export default function CheckoutPage() {
     }
   }
 
-  if (items.length === 0) return null
+  if (items.length === 0 && !orderSuccess) return null
+
+  // Order success popup
+  if (orderSuccess) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }}>
+        <div style={{ background: '#fff', borderRadius: 24, padding: 48, maxWidth: 400, width: '90%', textAlign: 'center', boxShadow: '0 24px 64px rgba(0,0,0,0.15)', animation: 'fadeIn 0.3s ease' }}>
+          {/* Success checkmark */}
+          <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#F0FDF4', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+            <svg width={36} height={36} fill="none" viewBox="0 0 24 24" stroke="#16A34A" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+          </div>
+          <h2 style={{ fontSize: 24, fontWeight: 700, color: '#1A1A1A', marginBottom: 8 }}>Order Placed!</h2>
+          <p style={{ fontSize: 14, color: '#888', marginBottom: 8 }}>Your order <span style={{ fontWeight: 600, color: '#C8964B' }}>#{orderSuccess.orderNumber}</span> has been placed successfully.</p>
+          <p style={{ fontSize: 13, color: '#AAA', marginBottom: 32 }}>You can track your order status in the orders page.</p>
+          <a
+            href={`/orders`}
+            style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: 48, padding: '0 32px', borderRadius: 12, background: '#C8964B', color: '#fff', fontSize: 15, fontWeight: 600, textDecoration: 'none', transition: 'all 0.2s' }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#B5843F')}
+            onMouseLeave={e => (e.currentTarget.style.background = '#C8964B')}
+          >
+            View My Orders
+          </a>
+        </div>
+        <style>{`@keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }`}</style>
+      </div>
+    )
+  }
 
   return (
     <>

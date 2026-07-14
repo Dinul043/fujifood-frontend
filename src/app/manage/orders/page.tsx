@@ -76,22 +76,23 @@ export default function OrdersPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 24, overflowX: 'auto', paddingBottom: 8 }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 24, overflowX: 'auto', paddingBottom: 8, WebkitOverflowScrolling: 'touch' }} className="scrollbar-hide">
         {STATUS_TABS.map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             style={{
-              padding: '8px 16px',
-              borderRadius: 10,
+              padding: '6px 12px',
+              borderRadius: 8,
               border: activeTab === tab ? 'none' : '1px solid #E8E4DE',
               background: activeTab === tab ? '#C8964B' : '#fff',
               color: activeTab === tab ? '#fff' : '#666',
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: 600,
               cursor: 'pointer',
               textTransform: 'capitalize',
               whiteSpace: 'nowrap',
+              flexShrink: 0,
               transition: 'all 0.2s ease',
             }}
           >
@@ -106,7 +107,7 @@ export default function OrdersPage() {
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 60, color: '#AAA', fontSize: 14 }}>No orders found.</div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
           {filtered.map(order => (
             <div
               key={order.id}

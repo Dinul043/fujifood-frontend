@@ -1,6 +1,8 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { addToCart } from '@/hooks/useCart'
+import api from '@/lib/api'
 
 /**
  * MobileHomePage — Complete mobile homepage (320-425px).
@@ -8,7 +10,7 @@ import { addToCart } from '@/hooks/useCart'
  * Sections:
  *   1. Hero (stacked: text + image below)
  *   2. Features (2x2 grid, compact)
- *   3. Customer Favorites (vertical list with thumbnails)
+ *   3. Customer Favorites (vertical list with thumbnails) — fetched from API
  *   4. Promo banner (compact dark card)
  *   5. How It Works (numbered vertical list)
  *   6. Bottom navigation bar
@@ -16,7 +18,40 @@ import { addToCart } from '@/hooks/useCart'
  * Same gold/dark theme. Completely different layout from desktop.
  * All padding: 20px horizontal (matches mobile header).
  */
+
+interface MenuItem {
+  id: number
+  name: string
+  price: number
+  image_url?: string
+}
+
 export function MobileHomePage() {
+  const [favorites, setFavorites] = useState<MenuItem[]>([])
+  const [restaurant, setRestaurant] = useState<any>(null)
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get('/menu/storefront/a2b')
+        const allItems: MenuItem[] = []
+        if (data.categories && Array.isArray(data.categories)) {
+          data.categories.forEach((cat: any) => {
+            if (cat.items && Array.isArray(cat.items)) {
+              cat.items.forEach((item: any) => {
+                if (item.is_available !== false) allItems.push(item)
+              })
+            }
+          })
+        }
+        setFavorites(allItems.slice(0, 5))
+      } catch {}
+      try {
+        const { data } = await api.get('/restaurants/storefront/a2b')
+        setRestaurant(data)
+      } catch {}
+    })()
+  }, [])
   return (
     <div style={{ paddingTop: '96px' }}>
       {/* ─── Hero ──────────────────────────────────────────────── */}
@@ -111,20 +146,14 @@ export function MobileHomePage() {
         </div>
 
         <div className="flex flex-col" style={{ gap: '12px' }}>
-          {[
-            { id: 101, name: 'Ghee Roast Dosa', price: 120, rating: 4.8, img: '/images/food/dish-2.png' },
-            { id: 102, name: 'Mini Tiffin', price: 99, rating: 4.5, img: '/images/food/dish-3.png' },
-            { id: 103, name: 'Paneer Butter Masala', price: 160, rating: 4.7, img: '/images/food/dish-4.png' },
-            { id: 104, name: 'South Indian Thali', price: 169, rating: 4.6, img: '/images/food/dish-5.png' },
-            { id: 105, name: 'Filter Coffee', price: 50, rating: 4.3, img: '/images/food/dish-6.png' },
-          ].map((item) => (
+          {favorites.map((item) => (
             <div
-              key={item.name}
+              key={item.id}
               className="flex items-center bg-white"
               style={{ gap: '12px', padding: '12px', borderRadius: '12px', border: '1px solid #EEEAE5' }}
             >
               <img
-                src={item.img}
+                src={item.image_url || `/images/food/dish-${(item.id % 10) + 1}.png`}
                 alt={item.name}
                 className="flex-shrink-0 object-cover"
                 style={{ width: '56px', height: '56px', borderRadius: '10px' }}
@@ -135,16 +164,10 @@ export function MobileHomePage() {
                 </h3>
                 <div className="flex items-center" style={{ gap: '8px' }}>
                   <span className="font-bold text-[#C8964B]" style={{ fontSize: '14px' }}>&#8377;{item.price}</span>
-                  <span className="flex items-center text-[#888]" style={{ fontSize: '11px', gap: '3px' }}>
-                    <svg className="text-[#D4A853] fill-current" width="12" height="12" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                    {item.rating}
-                  </span>
                 </div>
               </div>
               <button
-                onClick={() => addToCart({ id: item.id, name: item.name, price: item.price, image: item.img })}
+                onClick={() => addToCart({ id: item.id, name: item.name, price: item.price, image: item.image_url || `/images/food/dish-${(item.id % 10) + 1}.png` })}
                 className="flex-shrink-0 flex items-center justify-center rounded-full bg-[#C8964B] text-white"
                 style={{ width: '32px', height: '32px' }}
                 aria-label={`Add ${item.name}`}
@@ -155,6 +178,9 @@ export function MobileHomePage() {
               </button>
             </div>
           ))}
+          {favorites.length === 0 && (
+            <p className="text-center text-[#AAA]" style={{ fontSize: '13px', padding: '20px 0' }}>Loading menu...</p>
+          )}
         </div>
       </section>
 
@@ -222,12 +248,14 @@ export function MobileHomePage() {
             <span className="block font-heading font-bold text-white" style={{ fontSize: '22px' }}>A2B</span>
             <span className="block uppercase font-semibold text-[#C8964B]" style={{ fontSize: '8px', letterSpacing: '0.18em' }}>Veg Restaurant</span>
           </a>
-          <p className="text-[#888]" style={{ fontSize: '13px', lineHeight: '22px', marginBottom: '12px' }}>
-            123, Marina Beach Road, Anna Nagar, Chennai, Tamil Nadu 600001
-          </p>
+          {restaurant && (restaurant.address_line1 || restaurant.city) && (
+            <p className="text-[#888]" style={{ fontSize: '13px', lineHeight: '22px', marginBottom: '12px' }}>
+              {[restaurant.address_line1, restaurant.address_line2, restaurant.city, restaurant.state, restaurant.pincode].filter(Boolean).join(', ')}
+            </p>
+          )}
           <div className="flex flex-col" style={{ gap: '6px' }}>
-            <a href="tel:+919876543210" className="text-[#999] hover:text-white transition-colors" style={{ fontSize: '13px' }}>+91 98765 43210</a>
-            <a href="mailto:hello@a2b.com" className="text-[#999] hover:text-white transition-colors" style={{ fontSize: '13px' }}>hello@a2b.com</a>
+            {restaurant?.phone && <a href={`tel:${restaurant.phone}`} className="text-[#999] hover:text-white transition-colors" style={{ fontSize: '13px' }}>{restaurant.phone}</a>}
+            {restaurant?.email && <a href={`mailto:${restaurant.email}`} className="text-[#999] hover:text-white transition-colors" style={{ fontSize: '13px' }}>{restaurant.email}</a>}
           </div>
         </div>
 
@@ -235,8 +263,13 @@ export function MobileHomePage() {
           <div>
             <h4 className="uppercase font-semibold text-[#666]" style={{ fontSize: '10px', letterSpacing: '0.15em', marginBottom: '16px' }}>Quick Links</h4>
             <ul className="flex flex-col" style={{ gap: '12px' }}>
-              {['Menu', 'Cart', 'My Orders', 'About Us'].map((link) => (
-                <li key={link}><a href="#" className="text-[#999] hover:text-white transition-colors" style={{ fontSize: '13px' }}>{link}</a></li>
+              {[
+                { label: 'Menu', href: '/menu' },
+                { label: 'Cart', href: '/cart' },
+                { label: 'My Orders', href: '/orders' },
+                { label: 'Profile', href: '/profile' },
+              ].map((link) => (
+                <li key={link.label}><a href={link.href} className="text-[#999] hover:text-white transition-colors" style={{ fontSize: '13px' }}>{link.label}</a></li>
               ))}
             </ul>
           </div>

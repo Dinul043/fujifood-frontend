@@ -111,9 +111,22 @@ export default function BusinessPage() {
             onClick={() => {
               if (!navigator.geolocation) return
               navigator.geolocation.getCurrentPosition(
-                (pos) => {
+                async (pos) => {
                   updateField('latitude', pos.coords.latitude)
                   updateField('longitude', pos.coords.longitude)
+                  // Auto-fill address using reverse geocoding
+                  try {
+                    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`)
+                    const g = await r.json()
+                    if (g.address) {
+                      const addr = g.address
+                      const line1 = [addr.road, addr.neighbourhood, addr.suburb].filter(Boolean).join(', ')
+                      if (line1) updateField('address_line1', line1)
+                      if (addr.city || addr.town || addr.state_district) updateField('city', addr.city || addr.town || addr.state_district)
+                      if (addr.state) updateField('state', addr.state)
+                      if (addr.postcode) updateField('pincode', addr.postcode)
+                    }
+                  } catch {}
                 },
                 () => alert('Location access denied'),
                 { enableHighAccuracy: true }
@@ -152,6 +165,7 @@ export default function BusinessPage() {
             { key: 'address_line1', label: 'Address Line 1', type: 'text' },
             { key: 'address_line2', label: 'Address Line 2', type: 'text' },
             { key: 'city', label: 'City', type: 'text' },
+            { key: 'state', label: 'State', type: 'text' },
             { key: 'pincode', label: 'Pincode', type: 'text' },
           ].map(field => (
             <div key={field.key}>

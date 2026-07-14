@@ -26,9 +26,9 @@ interface FooterProps {
 
 export function Footer({
   restaurantName = 'A2B Veg Restaurant',
-  restaurantPhone = '+91 98765 43210',
-  restaurantEmail = 'hello@a2b.com',
-  restaurantAddress = '123, Marina Beach Road, Anna Nagar, Chennai, Tamil Nadu 600001',
+  restaurantPhone = '',
+  restaurantEmail = '',
+  restaurantAddress = '',
 }: FooterProps) {
   const currentYear = new Date().getFullYear()
 
@@ -51,16 +51,22 @@ export function Footer({
                 Veg Restaurant
               </span>
             </a>
-            <p className="text-[#888]" style={{ fontSize: '14px', lineHeight: '24px', marginBottom: '24px', maxWidth: '280px' }}>
-              {restaurantAddress}
-            </p>
+            {restaurantAddress && (
+              <p className="text-[#888]" style={{ fontSize: '14px', lineHeight: '24px', marginBottom: '24px', maxWidth: '280px' }}>
+                {restaurantAddress}
+              </p>
+            )}
             <div className="flex flex-col" style={{ gap: '8px' }}>
-              <a href={`tel:${restaurantPhone}`} className="text-[#999] hover:text-white transition-colors duration-200" style={{ fontSize: '14px' }}>
-                {restaurantPhone}
-              </a>
-              <a href={`mailto:${restaurantEmail}`} className="text-[#999] hover:text-white transition-colors duration-200" style={{ fontSize: '14px' }}>
-                {restaurantEmail}
-              </a>
+              {restaurantPhone && (
+                <a href={`tel:${restaurantPhone}`} className="text-[#999] hover:text-white transition-colors duration-200" style={{ fontSize: '14px' }}>
+                  {restaurantPhone}
+                </a>
+              )}
+              {restaurantEmail && (
+                <a href={`mailto:${restaurantEmail}`} className="text-[#999] hover:text-white transition-colors duration-200" style={{ fontSize: '14px' }}>
+                  {restaurantEmail}
+                </a>
+              )}
             </div>
           </div>
 
@@ -73,10 +79,15 @@ export function Footer({
               Quick Links
             </h4>
             <ul className="flex flex-col" style={{ gap: '16px' }}>
-              {['Menu', 'Cart', 'My Orders', 'About Us'].map((link) => (
-                <li key={link}>
-                  <a href="#" className="text-[#999] hover:text-white transition-colors duration-200" style={{ fontSize: '14px' }}>
-                    {link}
+              {[
+                { label: 'Menu', href: '/menu' },
+                { label: 'Cart', href: '/cart' },
+                { label: 'My Orders', href: '/orders' },
+                { label: 'Profile', href: '/profile' },
+              ].map((link) => (
+                <li key={link.label}>
+                  <a href={link.href} className="text-[#999] hover:text-white transition-colors duration-200" style={{ fontSize: '14px' }}>
+                    {link.label}
                   </a>
                 </li>
               ))}

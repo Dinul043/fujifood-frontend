@@ -1,9 +1,12 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { addToCart } from '@/hooks/useCart'
+import api from '@/lib/api'
 
 /**
  * BestsellersSection — Customer Favorites.
+ * Fetches real menu items from the API and displays up to 5.
  *
  * Specs (8px grid):
  *   Section padding: 80px top, 80px bottom
@@ -16,19 +19,47 @@ import { addToCart } from '@/hooks/useCart'
  *   Card shadow on hover: elevated
  *   Name: 15px, weight 600
  *   Price: 16px, weight 700, gold color
- *   Rating: 13px with gold star
  *   VEG badge: green, small, top-left of image
  */
 
-const bestsellers = [
-  { id: 1, name: 'Ghee Roast Dosa', price: 120, rating: 4.8, image: '/images/food/dish-2.png' },
-  { id: 2, name: 'Mini Tiffin', price: 99, rating: 4.5, image: '/images/food/dish-3.png' },
-  { id: 3, name: 'Paneer Butter Masala', price: 160, rating: 4.7, image: '/images/food/dish-4.png' },
-  { id: 4, name: 'South Indian Thali', price: 169, rating: 4.6, image: '/images/food/dish-5.png' },
-  { id: 5, name: 'Rava Kesari', price: 80, rating: 4.4, image: '/images/food/dish-6.png' },
-]
+interface MenuItem {
+  id: number
+  name: string
+  price: number
+  image_url?: string
+  is_available?: boolean
+}
 
 export function BestsellersSection() {
+  const [items, setItems] = useState<MenuItem[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get('/menu/storefront/a2b')
+        // Flatten all categories' items and pick first 5 available
+        const allItems: MenuItem[] = []
+        if (data.categories && Array.isArray(data.categories)) {
+          data.categories.forEach((cat: any) => {
+            if (cat.items && Array.isArray(cat.items)) {
+              cat.items.forEach((item: any) => {
+                if (item.is_available !== false) {
+                  allItems.push(item)
+                }
+              })
+            }
+          })
+        }
+        setItems(allItems.slice(0, 5))
+      } catch {
+        // If API fails, show nothing
+      } finally { setLoading(false) }
+    })()
+  }, [])
+
+  if (loading || items.length === 0) return null
+
   return (
     <section className="bg-[#FAFAF8]" style={{ paddingTop: '80px', paddingBottom: '80px' }}>
       <div className="mx-auto" style={{ maxWidth: '1280px', paddingLeft: '48px', paddingRight: '48px' }}>
@@ -60,7 +91,7 @@ export function BestsellersSection() {
 
         {/* Cards grid */}
         <div className="grid grid-cols-5" style={{ gap: '24px' }}>
-          {bestsellers.map((item) => (
+          {items.map((item) => (
             <div
               key={item.id}
               className="group bg-white overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-[0_8px_32px_rgba(0,0,0,0.08)] hover:-translate-y-[2px]"
@@ -69,7 +100,7 @@ export function BestsellersSection() {
               {/* Image */}
               <div className="relative overflow-hidden" style={{ aspectRatio: '1/1' }}>
                 <img
-                  src={item.image}
+                  src={item.image_url || `/images/food/dish-${(item.id % 10) + 1}.png`}
                   alt={item.name}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
@@ -102,12 +133,6 @@ export function BestsellersSection() {
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-[#C8964B]" style={{ fontSize: '16px' }}>
                     &#8377;{item.price}
-                  </span>
-                  <span className="flex items-center text-[#888]" style={{ fontSize: '13px', gap: '4px' }}>
-                    <svg className="text-[#D4A853] fill-current" width="14" height="14" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                    {item.rating}
                   </span>
                 </div>
               </div>

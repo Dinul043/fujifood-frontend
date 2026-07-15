@@ -61,8 +61,8 @@ const reasons = [
 
 export function WhyChooseUs() {
   return (
-    <section className="bg-[#FAF9F6]" style={{ paddingTop: '80px', paddingBottom: '96px' }}>
-      <div className="mx-auto" style={{ maxWidth: '1280px', paddingLeft: '48px', paddingRight: '48px' }}>
+    <section className="bg-[#FAF9F6] w-full" style={{ paddingTop: '80px', paddingBottom: '96px' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', paddingLeft: '48px', paddingRight: '48px' }}>
         <div className="grid grid-cols-2 items-center" style={{ gap: '80px' }}>
 
           {/* Left: Content */}

@@ -92,7 +92,7 @@ export default function MenuPage() {
     <>
       {/* Desktop */}
       <div className="hidden md:block" style={{ marginTop: '88px' }}>
-        <div className="mx-auto" style={{ maxWidth: '1280px', paddingLeft: '48px', paddingRight: '48px', paddingTop: '48px', paddingBottom: '80px' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', paddingLeft: '48px', paddingRight: '48px', paddingTop: '48px', paddingBottom: '80px' }}>
           <div className="flex items-end justify-between" style={{ marginBottom: '40px' }}>
             <h1 className="font-heading font-bold text-[#1A1A1A]" style={{ fontSize: '36px', letterSpacing: '-0.02em' }}>Our Menu</h1>
             <div className="relative">

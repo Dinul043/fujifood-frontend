@@ -222,3 +222,22 @@ h1, h2, h3, h4, h5, h6 {
   background-size: 400px 100%;
   animation: shimmer 1.4s ease infinite;
 }
+
+
+/* ── Page Centering (handles Ctrl+minus zoom down to 25%) ─────── */
+html, body {
+  width: 100%;
+  min-width: 100%;
+}
+
+main, main > div {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+main section,
+main > div > section,
+main footer {
+  width: 100% !important;
+  max-width: none !important;
+}

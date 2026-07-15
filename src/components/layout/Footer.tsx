@@ -33,11 +33,10 @@ export function Footer({
   const currentYear = new Date().getFullYear()
 
   return (
-    <footer className="bg-[#141414]">
+    <footer className="bg-[#141414] w-full">
       {/* Main content */}
       <div
-        className="mx-auto"
-        style={{ maxWidth: '1280px', paddingLeft: '48px', paddingRight: '48px', paddingTop: '80px', paddingBottom: '64px' }}
+        style={{ maxWidth: '1280px', margin: '0 auto', paddingLeft: '48px', paddingRight: '48px', paddingTop: '80px', paddingBottom: '64px' }}
       >
         <div className="grid" style={{ gridTemplateColumns: '1.5fr 1fr 1fr 1fr', gap: '64px' }}>
 
@@ -143,8 +142,8 @@ export function Footer({
       {/* Bottom bar */}
       <div style={{ borderTop: '1px solid #2A2A2A' }}>
         <div
-          className="mx-auto flex items-center justify-between"
-          style={{ maxWidth: '1280px', paddingLeft: '48px', paddingRight: '48px', paddingTop: '24px', paddingBottom: '24px' }}
+          className="flex items-center justify-between"
+          style={{ maxWidth: '1280px', margin: '0 auto', paddingLeft: '48px', paddingRight: '48px', paddingTop: '24px', paddingBottom: '24px' }}
         >
           <p className="text-[#666]" style={{ fontSize: '13px' }}>
             &copy; {currentYear} {restaurantName}. All rights reserved.

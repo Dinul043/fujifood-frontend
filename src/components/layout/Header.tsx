@@ -63,9 +63,10 @@ export function Header() {
     <>
     <header className="fixed top-0 left-0 right-0 z-50 bg-[#141414] border-b border-[#2A2A2A]">
       <div
-        className="mx-auto flex items-center justify-between"
+        className="flex items-center justify-between"
         style={{
           maxWidth: '1280px',
+          margin: '0 auto',
           height: '88px',
           paddingLeft: '48px',
           paddingRight: '48px',
@@ -200,7 +201,7 @@ export function Header() {
         className="fixed left-0 right-0 z-[45] bg-[#1A1A1A] border-b border-[#333] shadow-lg"
         style={{ top: '88px' }}
       >
-        <div className="mx-auto" style={{ maxWidth: '1280px', padding: '16px 48px' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '16px 48px' }}>
           <div className="relative flex items-center">
             <svg className="absolute w-[18px] h-[18px] text-[#888] pointer-events-none" style={{ left: '16px' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
               <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />

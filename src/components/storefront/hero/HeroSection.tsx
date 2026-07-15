@@ -19,9 +19,9 @@ export function HeroSection() {
   return (
     <section className="bg-[#FAF9F6] w-full max-w-none mx-auto" style={{ marginTop: '88px' }}>
       <div
-        className="mx-auto"
         style={{
           maxWidth: '1280px',
+          margin: '0 auto',
           paddingLeft: '48px',
           paddingRight: '48px',
           paddingTop: '32px',

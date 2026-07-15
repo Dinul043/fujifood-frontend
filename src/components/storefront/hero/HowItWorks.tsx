@@ -63,8 +63,8 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <section className="bg-white" style={{ paddingTop: '80px', paddingBottom: '80px' }}>
-      <div className="mx-auto" style={{ maxWidth: '1280px', paddingLeft: '48px', paddingRight: '48px' }}>
+    <section className="bg-white w-full" style={{ paddingTop: '80px', paddingBottom: '80px' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', paddingLeft: '48px', paddingRight: '48px' }}>
 
         {/* Title */}
         <h2

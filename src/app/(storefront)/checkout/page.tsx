@@ -177,7 +177,7 @@ export default function CheckoutPage() {
     <>
       {/* Desktop */}
       <div className="hidden md:block" style={{ marginTop: '88px' }}>
-        <div className="mx-auto" style={{ maxWidth: '1280px', paddingLeft: '48px', paddingRight: '48px', paddingTop: '48px', paddingBottom: '80px' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', paddingLeft: '48px', paddingRight: '48px', paddingTop: '48px', paddingBottom: '80px' }}>
           <h1 className="font-heading font-bold text-[#1A1A1A]" style={{ fontSize: '32px', marginBottom: '40px' }}>Checkout</h1>
 
           {error && <div style={{ marginBottom: '24px', padding: '14px 20px', borderRadius: '12px', background: '#FEF2F2', border: '1px solid #FECACA' }}><p className="text-[#DC2626] font-medium" style={{ fontSize: '13px' }}>{error}</p></div>}

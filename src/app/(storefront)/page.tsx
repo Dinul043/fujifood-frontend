@@ -21,7 +21,7 @@ export default function HomePage() {
   return (
     <>
       {/* Desktop version — hidden on mobile */}
-      <div className="hidden md:block ">
+      <div className="hidden md:block w-full">
         <HeroSection />
         <FeaturesBar />
         <BestsellersSection />

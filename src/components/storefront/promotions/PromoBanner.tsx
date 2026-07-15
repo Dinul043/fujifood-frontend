@@ -16,8 +16,8 @@
  */
 export function PromoBanner() {
   return (
-    <section className="bg-[#FAFAF8]" style={{ paddingBottom: '80px' }}>
-      <div className="mx-auto" style={{ maxWidth: '1280px', paddingLeft: '48px', paddingRight: '48px' }}>
+    <section className="bg-[#FAFAF8] w-full" style={{ paddingBottom: '80px' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', paddingLeft: '48px', paddingRight: '48px' }}>
         <div
           className="relative overflow-hidden bg-[#1A1A1A]"
           style={{ borderRadius: '24px', padding: '56px 64px' }}

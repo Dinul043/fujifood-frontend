@@ -8,14 +8,14 @@ import { useCart } from '@/hooks/useCart'
  * Mobile: Stacked
  */
 export default function CartPage() {
-  const { items, total, updateQty, removeFromCart } = useCart()
+  const { items, total, updateQty } = useCart()
   const deliveryFee = total >= 299 ? 0 : 30
   const grandTotal = total + deliveryFee
   if (items.length === 0) {
     return (
       <>
         <div className="hidden md:block" style={{ marginTop: '88px' }}>
-          <div className="mx-auto text-center" style={{ maxWidth: '1280px', padding: '120px 48px' }}>
+          <div className="text-center" style={{ maxWidth: '1280px', margin: '0 auto', padding: '120px 48px' }}>
             <h1 className="font-heading font-bold text-[#1A1A1A]" style={{ fontSize: '28px', marginBottom: '16px' }}>Your cart is empty</h1>
             <p className="text-[#888]" style={{ fontSize: '15px', marginBottom: '32px' }}>Add some delicious items from our menu</p>
             <a href="/menu" className="inline-flex items-center justify-center font-semibold text-white bg-[#C8964B] hover:bg-[#B5843F] transition-all" style={{ height: '48px', paddingLeft: '32px', paddingRight: '32px', borderRadius: '12px', fontSize: '14px' }}>Browse Menu</a>
@@ -35,8 +35,8 @@ export default function CartPage() {
   return (
     <>
       {/* Desktop */}
-      <div className="hidden md:block 2xl:w-full max-w-[1600px] mx-auto" style={{ marginTop: '88px' }}>
-        <div className="mx-auto" style={{ maxWidth: '1280px', paddingLeft: '48px', paddingRight: '48px', paddingTop: '48px', paddingBottom: '80px' }}>
+      <div className="hidden md:block" style={{ marginTop: '88px' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', paddingLeft: '48px', paddingRight: '48px', paddingTop: '48px', paddingBottom: '80px' }}>
           <h1 className="font-heading font-bold text-[#1A1A1A]" style={{ fontSize: '32px', marginBottom: '40px' }}>Your Cart ({items.length} items)</h1>
           <div className="grid" style={{ gridTemplateColumns: '1fr 380px', gap: '48px' }}>
             <div className="flex flex-col" style={{ gap: '16px' }}>

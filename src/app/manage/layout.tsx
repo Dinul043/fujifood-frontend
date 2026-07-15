@@ -102,8 +102,9 @@ export default function ManageLayout({ children }: { children: React.ReactNode }
 
       {/* ════ DESKTOP (min-width 1024px) ════ */}
       <div className="hidden lg:block">
-        {/* Sidebar */}
-        <div style={{ position: 'fixed', top: 0, left: 0, bottom: 0, width: 240, background: '#fff', borderRight: '1px solid #EBEBEB', display: 'flex', flexDirection: 'column', zIndex: 30 }}>
+        <div style={{ maxWidth: 1600, margin: '0 auto', display: 'flex', minHeight: '100vh' }}>
+          {/* Sidebar */}
+          <div style={{ width: 240, background: '#fff', borderRight: '1px solid #EBEBEB', display: 'flex', flexDirection: 'column', flexShrink: 0, position: 'sticky', top: 0, height: '100vh' }}>
           <div style={{ height: 64, display: 'flex', alignItems: 'center', gap: 10, padding: '0 20px', borderBottom: '1px solid #F0F0F0' }}>
             <div style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg,#C8964B,#D4A853)', color: '#fff', fontSize: 11, fontWeight: 700 }}>A2B</div>
             <div><div style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A' }}>A2B Restaurant</div><div style={{ fontSize: 9, color: '#C8964B', letterSpacing: 1 }}>MANAGEMENT</div></div>
@@ -117,8 +118,9 @@ export default function ManageLayout({ children }: { children: React.ReactNode }
           </div>
         </div>
         {/* Content */}
-        <div style={{ marginLeft: 240, padding: '32px 40px', maxWidth: 1400 }}>
+        <div style={{ flex: 1, padding: '32px 40px', maxWidth: 1200 }}>
           {children}
+        </div>
         </div>
       </div>
 

@@ -56,8 +56,8 @@ export function FeaturesBar() {
   ]
 
   return (
-    <section className="bg-white border-y border-[#E8E4DE]">
-      <div className="mx-auto" style={{ maxWidth: '1280px', paddingLeft: '48px', paddingRight: '48px' }}>
+    <section className="bg-white border-y border-[#E8E4DE] w-full">
+      <div style={{ maxWidth: '1280px', margin: '0 auto', paddingLeft: '48px', paddingRight: '48px' }}>
         <div className="grid grid-cols-4" style={{ height: '80px' }}>
           {features.map((feature, index) => (
             <div

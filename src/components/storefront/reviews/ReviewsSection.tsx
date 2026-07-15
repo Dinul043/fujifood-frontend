@@ -36,7 +36,7 @@ export function ReviewsSection() {
   const avgRating = (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
 
   return (
-    <section style={{ paddingTop: 64, paddingBottom: 48, background: '#fff' }}>
+    <section style={{ paddingTop: 64, paddingBottom: 48, background: '#fff', width: '100%' }}>
       <div style={{ maxWidth: 1280, margin: '0 auto', paddingLeft: 48, paddingRight: 48 }}>
 
         {/* Header */}

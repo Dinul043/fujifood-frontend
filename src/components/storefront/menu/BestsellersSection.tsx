@@ -61,8 +61,8 @@ export function BestsellersSection() {
   if (loading || items.length === 0) return null
 
   return (
-    <section className="bg-[#FAFAF8]" style={{ paddingTop: '80px', paddingBottom: '80px' }}>
-      <div className="mx-auto" style={{ maxWidth: '1280px', paddingLeft: '48px', paddingRight: '48px' }}>
+    <section className="bg-[#FAFAF8] w-full" style={{ paddingTop: '80px', paddingBottom: '80px' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', paddingLeft: '48px', paddingRight: '48px' }}>
 
         {/* Section header */}
         <div className="flex items-end justify-between" style={{ marginBottom: '48px' }}>

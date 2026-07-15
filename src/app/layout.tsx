@@ -31,7 +31,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${jakartaSans.variable} ${inter.variable}`}>
-      <body className="min-h-screen bg-background text-text antialiased">
+      <body className="min-h-screen w-full bg-background text-text antialiased">
         <ThemeProvider>
           <AuthGateProvider>
             <ToastProvider>

@@ -6,6 +6,7 @@ import api from '@/lib/api'
 export default function DashboardPage() {
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [isOwner, setIsOwner] = useState(false)
 
   const fetchOrders = async () => {
     try {
@@ -14,7 +15,10 @@ export default function DashboardPage() {
     } catch {} finally { setLoading(false) }
   }
 
-  useEffect(() => { fetchOrders() }, [])
+  useEffect(() => {
+    fetchOrders()
+    ;(async () => { try { const { data } = await api.get('/auth/me'); setIsOwner(data.is_owner || false) } catch {} })()
+  }, [])
 
   // Auto-refresh every 10 seconds (WebSocket notification handled by layout)
   useEffect(() => {
@@ -48,7 +52,7 @@ export default function DashboardPage() {
     { label: 'Preparing', val: todayOrders.filter(o => ['confirmed', 'preparing'].includes(o.status)).length, sub: 'In progress', color: '#2563EB', bg: '#EFF6FF', icon: 'M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z' },
     { label: 'Delivered', val: todayOrders.filter(o => o.status === 'delivered').length, sub: 'Completed today', color: '#16A34A', bg: '#F0FDF4', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
     { label: 'Cancelled', val: todayOrders.filter(o => ['cancelled', 'rejected'].includes(o.status)).length, sub: 'Cancelled today', color: '#DC2626', bg: '#FEF2F2', icon: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z' },
-    { label: 'Revenue', val: `₹${todayRevenue.toLocaleString()}`, sub: calcChange(todayRevenue, yesterdayRevenue), color: '#16A34A', bg: '#F0FDF4', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+    ...(isOwner ? [{ label: 'Revenue', val: `₹${todayRevenue.toLocaleString()}`, sub: calcChange(todayRevenue, yesterdayRevenue), color: '#16A34A', bg: '#F0FDF4', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' }] : []),
   ]
 
   // Calculate top selling items from actual order data
@@ -113,7 +117,8 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Top Items — calculated from real data */}
+        {/* Top Items — only for owner */}
+        {isOwner && (
         <div style={{ background: '#fff', border: '1px solid #F0F0F0', borderRadius: 16, padding: 24, transition: 'all 0.2s ease' }} onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.04)' }} onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = 'none' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <h2 style={{ fontSize: 16, fontWeight: 600, color: '#1A1A1A' }}>Top Selling Items</h2>
@@ -135,6 +140,7 @@ export default function DashboardPage() {
             </div>
           ))}
         </div>
+        )}
       </div>
     </div>
   )

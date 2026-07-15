@@ -11,12 +11,26 @@ export default function AccountPage() {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
 
+  // Staff management
+  const [staffList, setStaffList] = useState<any[]>([])
+  const [showStaffForm, setShowStaffForm] = useState(false)
+  const [staffForm, setStaffForm] = useState({ name: '', phone: '', password: '' })
+  const [addingStaff, setAddingStaff] = useState(false)
+  const [staffError, setStaffError] = useState('')
+
   useEffect(() => {
     (async () => {
       try {
         const { data } = await api.get('/auth/me')
         setUser(data)
         setForm(prev => ({ ...prev, name: data.name || '', phone: data.phone || '' }))
+        // Fetch staff list if owner
+        if (data.is_owner) {
+          try {
+            const { data: staff } = await api.get('/staff/')
+            setStaffList(staff || [])
+          } catch {}
+        }
       } catch {}
       finally { setLoading(false) }
     })()
@@ -74,12 +88,10 @@ export default function AccountPage() {
         <p style={{ fontSize: 14, color: '#888', marginBottom: 32 }}>Manage your profile and security.</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 24 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
         {/* Profile Info */}
         <div
-          style={{ background: '#fff', border: '1px solid #F0F0F0', borderRadius: 16, padding: 24, transition: 'all 0.2s ease' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.04)' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = 'none' }}
+          style={{ background: '#fff', border: '1px solid #F0F0F0', borderRadius: 16, padding: 20 }}
         >
           <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1A1A1A', marginBottom: 20 }}>Profile</h3>
 
@@ -94,32 +106,26 @@ export default function AccountPage() {
             </div>
             <div>
               <p style={{ fontSize: 16, fontWeight: 600, color: '#1A1A1A' }}>{user?.name || 'User'}</p>
-              <p style={{ fontSize: 13, color: '#AAA' }}>{user?.email || ''}</p>
+              <p style={{ fontSize: 13, color: '#AAA' }}>{user?.is_owner ? 'Restaurant Owner' : 'Staff'}</p>
             </div>
           </div>
 
           {/* Info fields */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F8F8F8' }}>
-              <span style={{ fontSize: 13, color: '#888' }}>Email</span>
-              <span style={{ fontSize: 13, fontWeight: 500, color: '#1A1A1A' }}>{user?.email || '—'}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F8F8F8' }}>
               <span style={{ fontSize: 13, color: '#888' }}>Phone</span>
               <span style={{ fontSize: 13, fontWeight: 500, color: '#1A1A1A' }}>{user?.phone || '—'}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #F8F8F8' }}>
               <span style={{ fontSize: 13, color: '#888' }}>Role</span>
-              <span style={{ fontSize: 11, fontWeight: 500, padding: '4px 10px', borderRadius: 6, background: '#FDF6EC', color: '#C8964B', textTransform: 'capitalize' }}>{user?.role || 'owner'}</span>
+              <span style={{ fontSize: 11, fontWeight: 500, padding: '4px 10px', borderRadius: 6, background: '#FDF6EC', color: '#C8964B', textTransform: 'capitalize' }}>{user?.is_owner ? 'Owner' : 'Staff'}</span>
             </div>
           </div>
         </div>
 
         {/* Update Profile Form */}
         <div
-          style={{ background: '#fff', border: '1px solid #F0F0F0', borderRadius: 16, padding: 24, transition: 'all 0.2s ease' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.04)' }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = 'none' }}
+          style={{ background: '#fff', border: '1px solid #F0F0F0', borderRadius: 16, padding: 20 }}
         >
           <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1A1A1A', marginBottom: 20 }}>Update Profile</h3>
           <form onSubmit={updateProfile} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -171,6 +177,118 @@ export default function AccountPage() {
           </form>
         </div>
       </div>
+
+      {/* Staff Management — Owner Only */}
+      {user?.is_owner && (
+        <div style={{ marginTop: 32 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1A1A1A' }}>Staff Members</h2>
+            <button
+              onClick={() => setShowStaffForm(!showStaffForm)}
+              style={{ height: 34, padding: '0 14px', borderRadius: 10, border: 'none', background: '#C8964B', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+            >
+              {showStaffForm ? 'Cancel' : '+ Add Staff'}
+            </button>
+          </div>
+
+          {/* Add Staff Form */}
+          {showStaffForm && (
+            <div style={{ background: '#fff', border: '1px solid #F0F0F0', borderRadius: 16, padding: 16, marginBottom: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 12 }}>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 500, color: '#666', marginBottom: 4, display: 'block' }}>Name</label>
+                  <input style={inputStyle} value={staffForm.name} onChange={e => setStaffForm(p => ({ ...p, name: e.target.value }))} placeholder="Staff name" />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 500, color: '#666', marginBottom: 4, display: 'block' }}>Phone (login ID)</label>
+                  <input style={inputStyle} value={staffForm.phone} onChange={e => setStaffForm(p => ({ ...p, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))} placeholder="10-digit phone" maxLength={10} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 11, fontWeight: 500, color: '#666', marginBottom: 4, display: 'block' }}>Password</label>
+                  <input style={inputStyle} type="password" value={staffForm.password} onChange={e => setStaffForm(p => ({ ...p, password: e.target.value }))} placeholder="Min 6 characters" />
+                </div>
+              </div>
+              {staffError && <p style={{ fontSize: 12, color: '#DC2626', marginBottom: 8 }}>{staffError}</p>}
+              <button
+                onClick={async () => {
+                  setStaffError('')
+                  if (!staffForm.name || !staffForm.phone || !staffForm.password) { setStaffError('All fields are required'); return }
+                  if (staffForm.phone.length !== 10) { setStaffError('Phone must be exactly 10 digits'); return }
+                  if (staffForm.password.length < 6) { setStaffError('Password must be at least 6 characters'); return }
+                  setAddingStaff(true)
+                  try {
+                    await api.post('/staff/', staffForm)
+                    setStaffForm({ name: '', phone: '', password: '' })
+                    setShowStaffForm(false)
+                    const { data: staff } = await api.get('/staff/')
+                    setStaffList(staff || [])
+                  } catch (e: any) { setStaffError(e.response?.data?.detail || 'Failed to add staff') }
+                  finally { setAddingStaff(false) }
+                }}
+                disabled={addingStaff}
+                style={{ height: 36, padding: '0 20px', borderRadius: 10, border: 'none', background: '#16A34A', color: '#fff', fontSize: 12, fontWeight: 600, cursor: addingStaff ? 'not-allowed' : 'pointer', opacity: addingStaff ? 0.6 : 1 }}
+              >
+                {addingStaff ? 'Adding...' : 'Add Staff Member'}
+              </button>
+            </div>
+          )}
+
+          {/* Staff List */}
+          {staffList.length === 0 ? (
+            <div style={{ background: '#fff', border: '1px solid #F0F0F0', borderRadius: 16, padding: 32, textAlign: 'center' }}>
+              <p style={{ fontSize: 14, color: '#AAA' }}>No staff members added yet.</p>
+              <p style={{ fontSize: 12, color: '#CCC', marginTop: 4 }}>Staff can login with phone + password to manage orders and menu.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {staffList.map(s => (
+                <div key={s.id} style={{ background: '#fff', border: '1px solid #F0F0F0', borderRadius: 12, padding: '12px 14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: s.is_active ? '#F0FDF4' : '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: s.is_active ? '#16A34A' : '#DC2626', flexShrink: 0 }}>
+                      {(s.name || 'S')[0].toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 13, fontWeight: 500, color: '#1A1A1A', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</p>
+                      <p style={{ fontSize: 11, color: '#AAA' }}>{s.phone}</p>
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 500, padding: '3px 8px', borderRadius: 6, background: s.is_active ? '#F0FDF4' : '#FEF2F2', color: s.is_active ? '#16A34A' : '#DC2626', flexShrink: 0 }}>
+                      {s.is_active ? 'Active' : 'Disabled'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    {s.is_active ? (
+                      <button
+                        onClick={async () => {
+                          if (!window.confirm(`Remove ${s.name} from staff?`)) return
+                          try {
+                            await api.delete(`/staff/${s.id}`)
+                            setStaffList(prev => prev.map(x => x.id === s.id ? { ...x, is_active: false } : x))
+                          } catch {}
+                        }}
+                        style={{ fontSize: 11, color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA', padding: '5px 12px', borderRadius: 6, cursor: 'pointer', fontWeight: 500 }}
+                      >
+                        Remove
+                      </button>
+                    ) : (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await api.patch(`/staff/${s.id}`, { is_active: true })
+                            setStaffList(prev => prev.map(x => x.id === s.id ? { ...x, is_active: true } : x))
+                          } catch {}
+                        }}
+                        style={{ fontSize: 11, color: '#16A34A', background: '#F0FDF4', border: '1px solid #BBF7D0', padding: '5px 12px', borderRadius: 6, cursor: 'pointer', fontWeight: 500 }}
+                      >
+                        Reactivate
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Logout */}
       <div style={{ marginTop: 32, display: 'flex', justifyContent: 'flex-end' }}>

@@ -128,7 +128,7 @@ export default function BusinessPage() {
                     }
                   } catch {}
                 },
-                () => alert('Location access denied'),
+                () => {},
                 { enableHighAccuracy: true }
               )
             }}

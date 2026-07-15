@@ -51,12 +51,12 @@ export default function StorefrontLayout({
       </div>
 
       {/* Mobile Header — hidden on desktop */}
-      <div className="block md:hidden">
+      <div className="block md:hidden ">
         <MobileHeader />
       </div>
 
       {/* Main content */}
-      <main className="min-h-screen">{children}</main>
+      <main className="min-h-screen max-w-full w-full mx-auto">{children}</main>
 
       {/* Desktop Footer — hidden on mobile (mobile footer is in MobileHomePage) */}
       <div className="hidden md:block" id="site-footer">

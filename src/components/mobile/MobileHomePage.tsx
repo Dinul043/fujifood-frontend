@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { addToCart } from '@/hooks/useCart'
 import api from '@/lib/api'
+import { MobileReviews } from '@/components/mobile/MobileReviews'
 
 /**
  * MobileHomePage — Complete mobile homepage (320-425px).
@@ -213,6 +214,9 @@ export function MobileHomePage() {
         </div>
       </section>
 
+      {/* ─── Customer Reviews ──────────────────────────────────── */}
+      <MobileReviews />
+
       {/* ─── How It Works ──────────────────────────────────────── */}
       <section className="bg-white" style={{ padding: '32px 20px' }}>
         <h2 className="font-heading font-bold text-[#1A1A1A] text-center" style={{ fontSize: '20px', marginBottom: '24px' }}>
@@ -277,7 +281,7 @@ export function MobileHomePage() {
             <h4 className="uppercase font-semibold text-[#666]" style={{ fontSize: '10px', letterSpacing: '0.15em', marginBottom: '16px' }}>Legal</h4>
             <ul className="flex flex-col" style={{ gap: '12px' }}>
               {['Privacy Policy', 'Terms of Service', 'Refund Policy'].map((link) => (
-                <li key={link}><a href="#" className="text-[#999] hover:text-white transition-colors" style={{ fontSize: '13px' }}>{link}</a></li>
+                <li key={link}><a href="javascript:void(0)" className="text-[#999] hover:text-white transition-colors" style={{ fontSize: '13px' }}>{link}</a></li>
               ))}
             </ul>
           </div>

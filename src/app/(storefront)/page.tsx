@@ -14,17 +14,19 @@ import { BestsellersSection } from '@/components/storefront/menu/BestsellersSect
 import { PromoBanner } from '@/components/storefront/promotions/PromoBanner'
 import { HowItWorks } from '@/components/storefront/hero/HowItWorks'
 import { WhyChooseUs } from '@/components/storefront/hero/WhyChooseUs'
+import { ReviewsSection } from '@/components/storefront/reviews/ReviewsSection'
 import { MobileHomePage } from '@/components/mobile/MobileHomePage'
 
 export default function HomePage() {
   return (
     <>
       {/* Desktop version — hidden on mobile */}
-      <div className="hidden md:block">
+      <div className="hidden md:block ">
         <HeroSection />
         <FeaturesBar />
         <BestsellersSection />
         <PromoBanner />
+        <ReviewsSection />
         <HowItWorks />
         <WhyChooseUs />
       </div>

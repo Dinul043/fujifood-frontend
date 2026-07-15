@@ -35,7 +35,7 @@ export default function CartPage() {
   return (
     <>
       {/* Desktop */}
-      <div className="hidden md:block" style={{ marginTop: '88px' }}>
+      <div className="hidden md:block 2xl:w-full max-w-[1600px] mx-auto" style={{ marginTop: '88px' }}>
         <div className="mx-auto" style={{ maxWidth: '1280px', paddingLeft: '48px', paddingRight: '48px', paddingTop: '48px', paddingBottom: '80px' }}>
           <h1 className="font-heading font-bold text-[#1A1A1A]" style={{ fontSize: '32px', marginBottom: '40px' }}>Your Cart ({items.length} items)</h1>
           <div className="grid" style={{ gridTemplateColumns: '1fr 380px', gap: '48px' }}>

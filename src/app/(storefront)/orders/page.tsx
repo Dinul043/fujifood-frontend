@@ -316,7 +316,7 @@ export default function OrdersPage() {
                     setOrders(prev => prev.map(o => o.id === cancelModal.id ? { ...o, status: 'cancelled' } : o))
                     setCancelModal(null)
                   } catch (e: any) {
-                    alert(e.response?.data?.detail || 'Cannot cancel this order')
+                    setCancelModal(null)
                   } finally { setCancelling(false) }
                 }}
                 disabled={cancelling}

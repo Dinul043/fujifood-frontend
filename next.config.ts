@@ -19,12 +19,6 @@ const nextConfig: NextConfig = {
         hostname: '*.fujifood.com',
         pathname: '/**',
       },
-      // AWS S3
-      {
-        protocol: 'https',
-        hostname: '*.s3.amazonaws.com',
-        pathname: '/**',
-      },
     ],
     // Responsive image sizes
     deviceSizes: [320, 375, 425, 640, 768, 1024, 1280, 1536],

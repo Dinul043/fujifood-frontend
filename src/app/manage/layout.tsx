@@ -6,15 +6,15 @@ import api from '@/lib/api'
 import { useWebSocket } from '@/hooks/useWebSocket'
 
 const nav = [
-  { label: 'Dashboard', href: '/manage', d: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-  { label: 'Orders', href: '/manage/orders', d: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
-  { label: 'Menu', href: '/manage/menu', d: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
-  { label: 'Website Studio', href: '/manage/website', d: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
-  { label: 'Business', href: '/manage/business', d: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
-  { label: 'Customers', href: '/manage/customers', d: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
-  { label: 'Reports', href: '/manage/reports', d: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
-  { label: 'History', href: '/manage/history', d: 'M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z' },
-  { label: 'Account', href: '/manage/account', d: 'M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
+  { label: 'Dashboard', href: '/manage', d: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6', ownerOnly: false },
+  { label: 'Orders', href: '/manage/orders', d: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', ownerOnly: false },
+  { label: 'Menu', href: '/manage/menu', d: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', ownerOnly: false },
+  { label: 'Website Studio', href: '/manage/website', d: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z', ownerOnly: true },
+  { label: 'Business', href: '/manage/business', d: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4', ownerOnly: true },
+  { label: 'Customers', href: '/manage/customers', d: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', ownerOnly: true },
+  { label: 'Reports', href: '/manage/reports', d: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', ownerOnly: true },
+  { label: 'History', href: '/manage/history', d: 'M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z', ownerOnly: true },
+  { label: 'Account', href: '/manage/account', d: 'M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z', ownerOnly: false },
 ]
 
 export default function ManageLayout({ children }: { children: React.ReactNode }) {
@@ -26,9 +26,19 @@ export default function ManageLayout({ children }: { children: React.ReactNode }
   const [tenantId, setTenantId] = useState<number | null>(null)
   const [pendingCount, setPendingCount] = useState(0)
   const [globalToast, setGlobalToast] = useState<{ message: string; orderNumber: string } | null>(null)
+  const [isOwner, setIsOwner] = useState(false)
 
-  useEffect(() => { (async () => { try { const { data } = await api.get('/auth/me'); if (data.role === 'restaurant_admin') { setOk(true); setNm(data.name?.[0] || 'R'); setTenantId(data.tenant_id) } else window.location.href = '/' } catch { window.location.href = '/login' } finally { setLoad(false) } })() }, [])
+  useEffect(() => { (async () => { try { const { data } = await api.get('/auth/me'); if (data.role === 'restaurant_admin') { setOk(true); setNm(data.name?.[0] || 'R'); setTenantId(data.tenant_id); setIsOwner(data.is_owner || false) } else window.location.href = '/' } catch { window.location.href = '/login' } finally { setLoad(false) } })() }, [])
   useEffect(() => { if (drawer) setDrawer(false) }, [path])
+
+  // Route protection: redirect non-owners from owner-only pages
+  useEffect(() => {
+    if (!ok || load) return
+    const ownerRoutes = ['/manage/website', '/manage/business', '/manage/customers', '/manage/reports', '/manage/history']
+    if (!isOwner && ownerRoutes.some(r => path.startsWith(r))) {
+      window.location.href = '/manage'
+    }
+  }, [path, isOwner, ok, load])
 
   // Fetch pending order count for badge
   useEffect(() => {
@@ -63,7 +73,7 @@ export default function ManageLayout({ children }: { children: React.ReactNode }
   if (!ok) return null
 
   const NavItems = () => (<>
-    {nav.map(n => {
+    {nav.filter(n => !n.ownerOnly || isOwner).map(n => {
       const a = n.href === '/manage' ? path === '/manage' : path.startsWith(n.href)
       const showBadge = n.label === 'Orders' && pendingCount > 0
       return <a key={n.href} href={n.href} onClick={() => setDrawer(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderRadius: 10, fontSize: 14, fontWeight: a ? 600 : 400, color: a ? '#C8964B' : '#666', background: a ? '#FDF6EC' : 'transparent', textDecoration: 'none', marginBottom: 2, transition: 'all 0.15s', position: 'relative' }} onMouseEnter={e => { if (!a) { (e.currentTarget as HTMLElement).style.background = '#F8F8F6'; (e.currentTarget as HTMLElement).style.transform = 'translateX(4px)' } }} onMouseLeave={e => { if (!a) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.transform = 'translateX(0)' } }}><svg width={18} height={18} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={a ? 2 : 1.5}><path strokeLinecap="round" strokeLinejoin="round" d={n.d} /></svg>{n.label}{showBadge && <span style={{ marginLeft: 'auto', minWidth: 20, height: 20, borderRadius: 10, background: '#DC2626', color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px' }}>{pendingCount}</span>}</a>

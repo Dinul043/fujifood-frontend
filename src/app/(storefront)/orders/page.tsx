@@ -31,6 +31,12 @@ export default function OrdersPage() {
   const [statusToast, setStatusToast] = useState<{ orderNumber: string; status: string } | null>(null)
   const [cancelModal, setCancelModal] = useState<{ id: number; orderNumber: string; items: string } | null>(null)
   const [cancelling, setCancelling] = useState(false)
+  const [reviewModal, setReviewModal] = useState<{ orderId: number; orderNumber: string; items: string } | null>(null)
+  const [reviewRating, setReviewRating] = useState(0)
+  const [reviewComment, setReviewComment] = useState('')
+  const [submittingReview, setSubmittingReview] = useState(false)
+  const [reviewError, setReviewError] = useState('')
+  const [reviewedOrders, setReviewedOrders] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -42,6 +48,11 @@ export default function OrdersPage() {
         setUserId(me.id)
         const { data } = await api.get('/orders/my-orders')
         setOrders(data.orders || [])
+        // Fetch reviewed orders
+        try {
+          const { data: reviews } = await api.get('/reviews/my-reviews')
+          setReviewedOrders(new Set((reviews || []).map((r: any) => r.order_id)))
+        } catch {}
       } catch {}
       finally { setLoading(false) }
     }
@@ -139,9 +150,18 @@ export default function OrdersPage() {
                     </div>
                     {/* Status message */}
                     {order.status === 'delivered' && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '8px', background: '#F0FDF4' }}>
-                        <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="#16A34A" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        <span style={{ fontSize: '12px', fontWeight: 500, color: '#16A34A' }}>Order delivered successfully</span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '8px 12px', borderRadius: '8px', background: '#F0FDF4' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="#16A34A" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          <span style={{ fontSize: '12px', fontWeight: 500, color: '#16A34A' }}>Order delivered successfully</span>
+                        </div>
+                        {!reviewedOrders.has(order.id) ? (
+                          <button onClick={() => { setReviewModal({ orderId: order.id, orderNumber: order.order_number, items: order.items.map((i: any) => i.item_name).join(', ') }); setReviewRating(0); setReviewComment(''); setReviewError('') }} style={{ fontSize: 11, fontWeight: 600, color: '#C8964B', background: '#FDF6EC', border: '1px solid #F0E6D3', padding: '5px 12px', borderRadius: 6, cursor: 'pointer' }}>
+                            Write Review
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: 11, fontWeight: 500, color: '#888', padding: '5px 12px' }}>Reviewed</span>
+                        )}
                       </div>
                     )}
                     {order.status === 'preparing' && (
@@ -214,6 +234,61 @@ export default function OrdersPage() {
           )}
         </div>
       </div>
+
+      {/* Review Modal */}
+      {reviewModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }}>
+          <div style={{ background: '#fff', borderRadius: 20, padding: 32, maxWidth: 380, width: '90%', boxShadow: '0 24px 64px rgba(0,0,0,0.15)', animation: 'fadeIn 0.2s ease' }}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: '#1A1A1A', marginBottom: 4, textAlign: 'center' }}>Rate Your Order</h3>
+            <p style={{ fontSize: 13, color: '#888', marginBottom: 4, textAlign: 'center' }}>{reviewModal.items}</p>
+            <p style={{ fontSize: 11, color: '#BBB', marginBottom: 20, textAlign: 'center' }}>Order #{reviewModal.orderNumber}</p>
+
+            {/* Star rating */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 20 }}>
+              {[1, 2, 3, 4, 5].map(star => (
+                <button key={star} onClick={() => setReviewRating(star)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                  <svg width={32} height={32} viewBox="0 0 24 24" fill={star <= reviewRating ? '#C8964B' : 'none'} stroke={star <= reviewRating ? '#C8964B' : '#DDD'} strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                  </svg>
+                </button>
+              ))}
+            </div>
+
+            {/* Comment */}
+            <textarea
+              value={reviewComment}
+              onChange={e => setReviewComment(e.target.value)}
+              placeholder="Share your experience (optional)"
+              style={{ width: '100%', height: 80, borderRadius: 10, border: '1px solid #E8E4DE', padding: '12px 14px', fontSize: 13, background: '#FAFAF8', outline: 'none', resize: 'none', marginBottom: 12 }}
+            />
+
+            {reviewError && <p style={{ fontSize: 12, color: '#DC2626', marginBottom: 12, textAlign: 'center' }}>{reviewError}</p>}
+
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => setReviewModal(null)} style={{ flex: 1, height: 44, borderRadius: 10, border: '1px solid #E8E4DE', background: '#fff', color: '#666', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button
+                onClick={async () => {
+                  if (reviewRating === 0) { setReviewError('Please select a rating'); return }
+                  setReviewError('')
+                  setSubmittingReview(true)
+                  try {
+                    await api.post('/reviews/', { order_id: reviewModal.orderId, rating: reviewRating, comment: reviewComment || null })
+                    setReviewedOrders(prev => new Set([...prev, reviewModal.orderId]))
+                    setReviewModal(null)
+                  } catch (e: any) {
+                    setReviewError(e.response?.data?.detail || 'Failed to submit review')
+                  }
+                  finally { setSubmittingReview(false) }
+                }}
+                disabled={submittingReview}
+                style={{ flex: 1, height: 44, borderRadius: 10, border: 'none', background: '#C8964B', color: '#fff', fontSize: 14, fontWeight: 600, cursor: submittingReview ? 'not-allowed' : 'pointer', opacity: submittingReview ? 0.6 : 1 }}
+              >
+                {submittingReview ? 'Submitting...' : 'Submit Review'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cancel Confirmation Modal */}
       {cancelModal && (

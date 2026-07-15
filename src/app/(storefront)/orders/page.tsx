@@ -1,15 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import api from '@/lib/api'
+import { useWebSocket } from '@/hooks/useWebSocket'
 
 /**
- * Orders Page — Shows customer's order history.
+ * Orders Page — Shows customer's order history with real-time WebSocket updates.
  * Fetches from GET /orders/my-orders
+ * WebSocket: ws://host/ws/customer/{user_id} for live status changes
  */
 
-interface OrderItem { item_name: string; item_price: number; quantity: number; line_total: number }
-interface Order { id: number; order_number: string; status: string; total_amount: number; items: OrderItem[]; created_at: string; estimated_delivery_time: number | null }
+interface OrderItem { item_name: string; item_price: number; quantity: number; line_total: number; menu_item_id?: number }
+interface Order { id: number; order_number: string; status: string; total_amount: number; items: OrderItem[]; created_at: string; estimated_delivery_time: number | null; payment_status?: string }
 
 const statusColors: Record<string, { bg: string; text: string }> = {
   pending: { bg: '#FFF7ED', text: '#D97706' },
@@ -25,24 +27,61 @@ export default function OrdersPage() {
   const [newOrder, setNewOrder] = useState<string | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
+  const [userId, setUserId] = useState<number | null>(null)
+  const [statusToast, setStatusToast] = useState<{ orderNumber: string; status: string } | null>(null)
 
   useEffect(() => {
-    // Get new order param from URL (without useSearchParams)
     const params = new URLSearchParams(window.location.search)
     setNewOrder(params.get('new'))
 
     async function fetchOrders() {
       try {
+        const { data: me } = await api.get('/auth/me')
+        setUserId(me.id)
         const { data } = await api.get('/orders/my-orders')
         setOrders(data.orders || [])
-      } catch { /* not logged in or error */ }
+      } catch {}
       finally { setLoading(false) }
     }
     fetchOrders()
   }, [])
 
+  // WebSocket for real-time order status updates
+  const wsUrl = userId
+    ? `${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/api\/v1$/, '').replace(/^http/, 'ws')}/ws/customer/${userId}`
+    : null
+
+  const handleWsMessage = useCallback((msg: { event: string; data: any }) => {
+    if (msg.event === 'order_status_updated') {
+      const { order_id, order_number, status } = msg.data
+      // Update the order in the list
+      setOrders(prev => prev.map(o =>
+        o.id === order_id ? { ...o, status } : o
+      ))
+      // Show toast
+      setStatusToast({ orderNumber: order_number, status })
+      setTimeout(() => setStatusToast(null), 4000)
+    }
+  }, [])
+
+  const { isConnected } = useWebSocket(wsUrl, handleWsMessage)
+
   return (
     <>
+      {/* Real-time status toast */}
+      {statusToast && (
+        <div style={{ position: 'fixed', top: 100, right: 24, zIndex: 60, animation: 'slideIn 0.3s ease', background: '#fff', borderRadius: 14, padding: '14px 20px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', border: '1px solid #F0F0F0', display: 'flex', alignItems: 'center', gap: 12, maxWidth: 340 }}>
+          <div style={{ width: 36, height: 36, borderRadius: '50%', background: statusColors[statusToast.status]?.bg || '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width={18} height={18} fill="none" viewBox="0 0 24 24" stroke={statusColors[statusToast.status]?.text || '#2563EB'} strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          </div>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#1A1A1A' }}>Order #{statusToast.orderNumber}</p>
+            <p style={{ fontSize: 12, color: '#888', textTransform: 'capitalize' }}>Status updated to {statusToast.status}</p>
+          </div>
+        </div>
+      )}
+      <style>{`@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`}</style>
+
       {/* Desktop */}
       <div className="hidden md:block" style={{ marginTop: '88px' }}>
         <div className="mx-auto" style={{ maxWidth: '1280px', paddingLeft: '48px', paddingRight: '48px', paddingTop: '48px', paddingBottom: '80px' }}>

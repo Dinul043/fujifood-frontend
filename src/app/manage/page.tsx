@@ -1,20 +1,40 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import api from '@/lib/api'
+import { useWebSocket } from '@/hooks/useWebSocket'
 
 export default function DashboardPage() {
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [tenantId, setTenantId] = useState<number | null>(null)
+
+  const fetchOrders = async () => {
+    try {
+      const { data } = await api.get('/orders/manage?page_size=500')
+      setOrders(data.orders || [])
+    } catch {} finally { setLoading(false) }
+  }
 
   useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await api.get('/orders/manage?page_size=500')
-        setOrders(data.orders || [])
-      } catch {} finally { setLoading(false) }
+    fetchOrders()
+    ;(async () => {
+      try { const { data } = await api.get('/auth/me'); setTenantId(data.tenant_id) } catch {}
     })()
   }, [])
+
+  // WebSocket — auto-refresh dashboard on new orders
+  const wsUrl = tenantId
+    ? `${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/api\/v1$/, '').replace(/^http/, 'ws')}/ws/admin/${tenantId}`
+    : null
+
+  const handleWsMessage = useCallback((msg: { event: string; data: any }) => {
+    if (msg.event === 'new_order' || msg.event === 'order_cancelled') {
+      fetchOrders()
+    }
+  }, [])
+
+  useWebSocket(wsUrl, handleWsMessage)
 
   // Today's date and yesterday's date
   const today = new Date().toDateString()

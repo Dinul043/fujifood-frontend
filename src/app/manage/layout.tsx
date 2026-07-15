@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { usePathname } from 'next/navigation'
 import api from '@/lib/api'
+import { useWebSocket } from '@/hooks/useWebSocket'
 
 const nav = [
   { label: 'Dashboard', href: '/manage', d: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
@@ -22,9 +23,41 @@ export default function ManageLayout({ children }: { children: React.ReactNode }
   const [load, setLoad] = useState(true)
   const [nm, setNm] = useState('R')
   const [drawer, setDrawer] = useState(false)
+  const [tenantId, setTenantId] = useState<number | null>(null)
+  const [pendingCount, setPendingCount] = useState(0)
+  const [globalToast, setGlobalToast] = useState<{ message: string; orderNumber: string } | null>(null)
 
-  useEffect(() => { (async () => { try { const { data } = await api.get('/auth/me'); if (data.role === 'restaurant_admin') { setOk(true); setNm(data.name?.[0] || 'R') } else window.location.href = '/' } catch { window.location.href = '/login' } finally { setLoad(false) } })() }, [])
+  useEffect(() => { (async () => { try { const { data } = await api.get('/auth/me'); if (data.role === 'restaurant_admin') { setOk(true); setNm(data.name?.[0] || 'R'); setTenantId(data.tenant_id) } else window.location.href = '/' } catch { window.location.href = '/login' } finally { setLoad(false) } })() }, [])
   useEffect(() => { if (drawer) setDrawer(false) }, [path])
+
+  // Fetch pending order count for badge
+  useEffect(() => {
+    if (!ok) return
+    ;(async () => {
+      try {
+        const { data } = await api.get('/orders/manage?page_size=100&status=pending')
+        setPendingCount(data.total || 0)
+      } catch {}
+    })()
+  }, [ok])
+
+  // Global WebSocket — works on ALL admin pages
+  const wsUrl = tenantId
+    ? `${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/api\/v1$/, '').replace(/^http/, 'ws')}/ws/admin/${tenantId}`
+    : null
+
+  const handleWsMessage = useCallback((msg: { event: string; data: any }) => {
+    if (msg.event === 'new_order') {
+      setPendingCount(prev => prev + 1)
+      setGlobalToast({ message: 'New order received!', orderNumber: msg.data.order_number })
+      setTimeout(() => setGlobalToast(null), 5000)
+    }
+    if (msg.event === 'order_cancelled') {
+      setPendingCount(prev => Math.max(0, prev - 1))
+    }
+  }, [])
+
+  useWebSocket(wsUrl, handleWsMessage)
 
   if (load) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FAFAF8' }}><p style={{ color: '#aaa', fontSize: 14 }}>Loading...</p></div>
   if (!ok) return null
@@ -32,12 +65,30 @@ export default function ManageLayout({ children }: { children: React.ReactNode }
   const NavItems = () => (<>
     {nav.map(n => {
       const a = n.href === '/manage' ? path === '/manage' : path.startsWith(n.href)
-      return <a key={n.href} href={n.href} onClick={() => setDrawer(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderRadius: 10, fontSize: 14, fontWeight: a ? 600 : 400, color: a ? '#C8964B' : '#666', background: a ? '#FDF6EC' : 'transparent', textDecoration: 'none', marginBottom: 2, transition: 'all 0.15s' }} onMouseEnter={e => { if (!a) { (e.currentTarget as HTMLElement).style.background = '#F8F8F6'; (e.currentTarget as HTMLElement).style.transform = 'translateX(4px)' } }} onMouseLeave={e => { if (!a) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.transform = 'translateX(0)' } }}><svg width={18} height={18} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={a ? 2 : 1.5}><path strokeLinecap="round" strokeLinejoin="round" d={n.d} /></svg>{n.label}</a>
+      const showBadge = n.label === 'Orders' && pendingCount > 0
+      return <a key={n.href} href={n.href} onClick={() => setDrawer(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderRadius: 10, fontSize: 14, fontWeight: a ? 600 : 400, color: a ? '#C8964B' : '#666', background: a ? '#FDF6EC' : 'transparent', textDecoration: 'none', marginBottom: 2, transition: 'all 0.15s', position: 'relative' }} onMouseEnter={e => { if (!a) { (e.currentTarget as HTMLElement).style.background = '#F8F8F6'; (e.currentTarget as HTMLElement).style.transform = 'translateX(4px)' } }} onMouseLeave={e => { if (!a) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.transform = 'translateX(0)' } }}><svg width={18} height={18} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={a ? 2 : 1.5}><path strokeLinecap="round" strokeLinejoin="round" d={n.d} /></svg>{n.label}{showBadge && <span style={{ marginLeft: 'auto', minWidth: 20, height: 20, borderRadius: 10, background: '#DC2626', color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 6px' }}>{pendingCount}</span>}</a>
     })}
   </>)
 
   return (
     <div style={{ background: '#FAFAF8', minHeight: '100vh' }}>
+
+      {/* Global new order notification toast */}
+      {globalToast && (
+        <div style={{ position: 'fixed', top: 20, right: 24, zIndex: 100, animation: 'toastSlide 0.3s ease', background: '#fff', borderRadius: 14, padding: '16px 20px', boxShadow: '0 12px 40px rgba(0,0,0,0.15)', border: '1px solid #F0F0F0', display: 'flex', alignItems: 'center', gap: 14, maxWidth: 360 }}>
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#FDF6EC', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width={20} height={20} fill="none" viewBox="0 0 24 24" stroke="#C8964B" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" /></svg>
+          </div>
+          <div>
+            <p style={{ fontSize: 14, fontWeight: 600, color: '#1A1A1A' }}>{globalToast.message}</p>
+            <p style={{ fontSize: 12, color: '#C8964B', fontWeight: 500 }}>Order #{globalToast.orderNumber}</p>
+          </div>
+          <button onClick={() => setGlobalToast(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, marginLeft: 8 }}>
+            <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="#AAA" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+      )}
+      <style>{`@keyframes toastSlide { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`}</style>
 
       {/* ════ DESKTOP (min-width 1024px) ════ */}
       <div className="hidden lg:block">

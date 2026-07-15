@@ -63,14 +63,14 @@ export default function CheckoutPage() {
     if (locationBlocked) { setLocationBlocked(false); setDeliveryWarning('') }
   }
 
-  // Redirect if cart empty
+  // Redirect if cart empty (but NOT after successful order placement)
   useEffect(() => {
-    if (typeof window !== 'undefined' && items.length === 0) {
+    if (typeof window !== 'undefined' && items.length === 0 && !orderSuccess) {
       // Small delay for hydration
-      const t = setTimeout(() => { if (items.length === 0) window.location.href = '/menu' }, 1000)
+      const t = setTimeout(() => { if (items.length === 0 && !orderSuccess) window.location.href = '/menu' }, 1500)
       return () => clearTimeout(t)
     }
-  }, [items])
+  }, [items, orderSuccess])
 
   const handlePlaceOrder = async () => {
     setError('')

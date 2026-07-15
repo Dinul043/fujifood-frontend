@@ -1,8 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import api from '@/lib/api'
-import { useWebSocket } from '@/hooks/useWebSocket'
 
 const STATUS_TABS = ['all', 'pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled']
 
@@ -21,8 +20,6 @@ export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState('all')
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState<string | null>(null)
-  const [tenantId, setTenantId] = useState<number | null>(null)
-  const [newOrderToast, setNewOrderToast] = useState<{ orderNumber: string; amount: number } | null>(null)
 
   const fetchOrders = async () => {
     try {
@@ -37,35 +34,11 @@ export default function OrdersPage() {
 
   useEffect(() => { fetchOrders() }, [])
 
-  // Get tenant_id for WebSocket connection
+  // Auto-refresh orders every 5 seconds (WebSocket notification is handled by layout)
   useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await api.get('/auth/me')
-        setTenantId(data.tenant_id)
-      } catch {}
-    })()
+    const interval = setInterval(fetchOrders, 5000)
+    return () => clearInterval(interval)
   }, [])
-
-  // WebSocket for real-time new order notifications
-  const wsUrl = tenantId
-    ? `${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/api\/v1$/, '').replace(/^http/, 'ws')}/ws/admin/${tenantId}`
-    : null
-
-  const handleWsMessage = useCallback((msg: { event: string; data: any }) => {
-    if (msg.event === 'new_order') {
-      // Refresh orders list
-      fetchOrders()
-      // Show toast
-      setNewOrderToast({ orderNumber: msg.data.order_number, amount: msg.data.total_amount })
-      setTimeout(() => setNewOrderToast(null), 5000)
-    }
-    if (msg.event === 'order_cancelled') {
-      fetchOrders()
-    }
-  }, [])
-
-  const { isConnected } = useWebSocket(wsUrl, handleWsMessage)
 
   const filtered = activeTab === 'all'
     ? orders
@@ -103,26 +76,9 @@ export default function OrdersPage() {
 
   return (
     <div>
-      {/* New order notification toast */}
-      {newOrderToast && (
-        <div style={{ position: 'fixed', top: 80, right: 24, zIndex: 60, animation: 'slideIn 0.3s ease', background: '#fff', borderRadius: 14, padding: '14px 20px', boxShadow: '0 8px 32px rgba(0,0,0,0.12)', border: '1px solid #F0F0F0', display: 'flex', alignItems: 'center', gap: 12, maxWidth: 340 }}>
-          <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#FDF6EC', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <svg width={18} height={18} fill="none" viewBox="0 0 24 24" stroke="#C8964B" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" /></svg>
-          </div>
-          <div>
-            <p style={{ fontSize: 13, fontWeight: 600, color: '#1A1A1A' }}>New Order #{newOrderToast.orderNumber}</p>
-            <p style={{ fontSize: 12, color: '#888' }}>Amount: ₹{newOrderToast.amount}</p>
-          </div>
-        </div>
-      )}
-      <style>{`@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`}</style>
-
       <div style={{ marginBottom: 8 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1A1A1A', marginBottom: 8 }}>Orders</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <p style={{ fontSize: 14, color: '#888', marginBottom: 32 }}>Manage incoming and active orders.</p>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: isConnected ? '#16A34A' : '#DC2626', display: 'inline-block', marginBottom: 32 }} title={isConnected ? 'Live updates connected' : 'Reconnecting...'} />
-        </div>
+        <p style={{ fontSize: 14, color: '#888', marginBottom: 32 }}>Manage incoming and active orders.</p>
       </div>
 
       {/* Filter Tabs */}

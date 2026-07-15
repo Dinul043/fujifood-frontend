@@ -29,6 +29,8 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<number | null>(null)
   const [statusToast, setStatusToast] = useState<{ orderNumber: string; status: string } | null>(null)
+  const [cancelModal, setCancelModal] = useState<{ id: number; orderNumber: string; items: string } | null>(null)
+  const [cancelling, setCancelling] = useState(false)
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -157,13 +159,7 @@ export default function OrdersPage() {
                     {/* Cancel button for pending/confirmed orders */}
                     {(order.status === 'pending' || order.status === 'confirmed') && (
                       <button
-                        onClick={async () => {
-                          if (!confirm('Are you sure you want to cancel this order?')) return
-                          try {
-                            await api.post(`/orders/my-orders/${order.id}/cancel`)
-                            window.location.reload()
-                          } catch (e: any) { alert(e.response?.data?.detail || 'Cannot cancel') }
-                        }}
+                        onClick={() => setCancelModal({ id: order.id, orderNumber: order.order_number, items: order.items.map(i => i.item_name).join(', ') })}
                         style={{ marginTop: 8, fontSize: 12, color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 500 }}
                       >
                         Cancel Order
@@ -218,6 +214,46 @@ export default function OrdersPage() {
           )}
         </div>
       </div>
+
+      {/* Cancel Confirmation Modal */}
+      {cancelModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }}>
+          <div style={{ background: '#fff', borderRadius: 20, padding: '32px', maxWidth: 380, width: '90%', textAlign: 'center', boxShadow: '0 24px 64px rgba(0,0,0,0.15)', animation: 'fadeIn 0.2s ease' }}>
+            <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+              <svg width={28} height={28} fill="none" viewBox="0 0 24 24" stroke="#DC2626" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+            </div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: '#1A1A1A', marginBottom: 8 }}>Cancel Order?</h3>
+            <p style={{ fontSize: 14, color: '#888', marginBottom: 24 }}>
+              Are you sure you want to cancel <span style={{ fontWeight: 600, color: '#1A1A1A' }}>{cancelModal.items}</span>? This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                onClick={() => setCancelModal(null)}
+                style={{ flex: 1, height: 44, borderRadius: 10, border: '1px solid #E8E4DE', background: '#fff', color: '#666', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Keep Order
+              </button>
+              <button
+                onClick={async () => {
+                  setCancelling(true)
+                  try {
+                    await api.post(`/orders/my-orders/${cancelModal.id}/cancel`)
+                    setOrders(prev => prev.map(o => o.id === cancelModal.id ? { ...o, status: 'cancelled' } : o))
+                    setCancelModal(null)
+                  } catch (e: any) {
+                    alert(e.response?.data?.detail || 'Cannot cancel this order')
+                  } finally { setCancelling(false) }
+                }}
+                disabled={cancelling}
+                style={{ flex: 1, height: 44, borderRadius: 10, border: 'none', background: '#DC2626', color: '#fff', fontSize: 14, fontWeight: 600, cursor: cancelling ? 'not-allowed' : 'pointer', opacity: cancelling ? 0.6 : 1 }}
+              >
+                {cancelling ? 'Cancelling...' : 'Yes, Cancel'}
+              </button>
+            </div>
+          </div>
+          <style>{`@keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }`}</style>
+        </div>
+      )}
     </>
   )
 }

@@ -12,6 +12,9 @@ export default function MenuPage() {
   const [submitting, setSubmitting] = useState(false)
   const [newCatName, setNewCatName] = useState('')
   const [addingCat, setAddingCat] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
 
   const fetchData = async () => {
     try {
@@ -50,18 +53,33 @@ export default function MenuPage() {
     if (!form.name || !form.price || !form.category_id) return
     setSubmitting(true)
     try {
+      // Upload image first if selected
+      let imageUrl = form.image_url || null
+      if (imageFile) {
+        setUploading(true)
+        const formData = new FormData()
+        formData.append('file', imageFile)
+        const { data: uploadRes } = await api.post('/upload/image', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+        imageUrl = uploadRes.url
+        setUploading(false)
+      }
+
       await api.post('/menu/manage/items', {
         name: form.name,
         price: parseFloat(form.price),
         category_id: parseInt(form.category_id),
         food_type: form.food_type,
-        image_url: form.image_url || null,
+        image_url: imageUrl,
       })
       setForm({ name: '', price: '', category_id: '', food_type: 'veg', image_url: '' })
+      setImageFile(null)
+      setImagePreview(null)
       setShowForm(false)
       await fetchData()
     } catch {}
-    finally { setSubmitting(false) }
+    finally { setSubmitting(false); setUploading(false) }
   }
 
   const getCategoryName = (catId: number) => {
@@ -151,8 +169,27 @@ export default function MenuPage() {
               </select>
             </div>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 500, color: '#666', marginBottom: 6, display: 'block' }}>Image URL (optional)</label>
-              <input style={inputStyle} value={form.image_url} onChange={e => setForm(p => ({ ...p, image_url: e.target.value }))} placeholder="https://... or /images/food/dish.png" />
+              <label style={{ fontSize: 12, fontWeight: 500, color: '#666', marginBottom: 6, display: 'block' }}>Image</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <label style={{ height: 40, padding: '0 16px', borderRadius: 10, border: '1px solid #E8E4DE', background: '#FAFAF8', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: '#666' }}>
+                  <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="#888" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
+                  {imageFile ? imageFile.name.slice(0, 20) : 'Choose Image'}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0]
+                      if (f) {
+                        setImageFile(f)
+                        setImagePreview(URL.createObjectURL(f))
+                        setForm(p => ({ ...p, image_url: '' }))
+                      }
+                    }}
+                  />
+                </label>
+                {imagePreview && <img src={imagePreview} alt="preview" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover' }} />}
+              </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'flex-end' }}>
               <button
@@ -172,7 +209,7 @@ export default function MenuPage() {
                   width: '100%',
                 }}
               >
-                {submitting ? 'Adding...' : 'Add Item'}
+                {submitting ? (uploading ? 'Uploading...' : 'Adding...') : 'Add Item'}
               </button>
             </div>
           </form>

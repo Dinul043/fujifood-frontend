@@ -2,9 +2,11 @@
 
 /**
  * useCart — Global cart state with localStorage persistence.
+ * Scoped per user: each logged-in user has their own cart.
  * Hydration-safe: renders 0 on server, syncs from localStorage on client mount.
  */
 import { useState, useEffect, useCallback } from 'react'
+import Cookies from 'js-cookie'
 
 export interface CartItem {
   id: number
@@ -14,19 +16,29 @@ export interface CartItem {
   qty: number
 }
 
-const CART_KEY = 'fujifood_cart'
+const CART_PREFIX = 'fujifood_cart_'
+
+function getCartKey(): string {
+  // Use access token hash or a simple identifier to scope cart per user
+  const token = Cookies.get('fujifood_access_token')
+  if (token) {
+    // Use first 8 chars of token as user identifier
+    return CART_PREFIX + token.slice(-8)
+  }
+  return CART_PREFIX + 'guest'
+}
 
 function loadFromStorage(): CartItem[] {
   if (typeof window === 'undefined') return []
   try {
-    const stored = localStorage.getItem(CART_KEY)
+    const stored = localStorage.getItem(getCartKey())
     return stored ? JSON.parse(stored) : []
   } catch { return [] }
 }
 
 function saveToStorage(items: CartItem[]) {
   if (typeof window === 'undefined') return
-  localStorage.setItem(CART_KEY, JSON.stringify(items))
+  localStorage.setItem(getCartKey(), JSON.stringify(items))
 }
 
 // Global state + listeners for cross-component reactivity

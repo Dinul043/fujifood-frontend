@@ -104,9 +104,9 @@ export function Footer({
             <ul className="flex flex-col" style={{ gap: '16px' }}>
               {['Privacy Policy', 'Terms of Service', 'Refund Policy', 'Cookie Policy'].map((link) => (
                 <li key={link}>
-                  <a href="javascript:void(0)" className="text-[#999] hover:text-white transition-colors duration-200" style={{ fontSize: '14px' }}>
+                  <span className="text-[#999]" style={{ fontSize: '14px' }}>
                     {link}
-                  </a>
+                  </span>
                 </li>
               ))}
             </ul>

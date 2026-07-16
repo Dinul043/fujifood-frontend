@@ -281,7 +281,7 @@ export function MobileHomePage() {
             <h4 className="uppercase font-semibold text-[#666]" style={{ fontSize: '10px', letterSpacing: '0.15em', marginBottom: '16px' }}>Legal</h4>
             <ul className="flex flex-col" style={{ gap: '12px' }}>
               {['Privacy Policy', 'Terms of Service', 'Refund Policy'].map((link) => (
-                <li key={link}><a href="javascript:void(0)" className="text-[#999] hover:text-white transition-colors" style={{ fontSize: '13px' }}>{link}</a></li>
+                <li key={link}><span className="text-[#999]" style={{ fontSize: '13px' }}>{link}</span></li>
               ))}
             </ul>
           </div>

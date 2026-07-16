@@ -38,7 +38,7 @@ export default function LoginPage() {
 
     setLoading(true)
     try {
-      const { data } = await api.post('/auth/otp/send', { email, tenant_slug: TENANT_SLUG })
+      const { data } = await api.post('/auth/otp/send', { email, tenant_slug: TENANT_SLUG, is_signup: true })
       const match = data.message?.match(/OTP is (\d{4})/)
       if (match) setDevOtp(match[1])
       setStep('otp')

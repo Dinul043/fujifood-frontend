@@ -29,9 +29,7 @@ export default function HistoryPage() {
           page++
         }
         setOrders(allOrders)
-      } catch (e) {
-        console.error('History fetch error:', e)
-      }
+      } catch {
       finally { setLoading(false) }
     })()
   }, [])

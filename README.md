@@ -22,6 +22,18 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
+**Required packages (already in package.json):**
+- next, react, react-dom
+- typescript
+- tailwindcss
+- axios (HTTP client)
+- js-cookie (token storage)
+
+If `npm install` fails, try:
+```bash
+npm install --legacy-peer-deps
+```
+
 ## Environment Variables
 
 Create `.env.local` in the root:
@@ -64,8 +76,7 @@ src/
 │   │   ├── business/page.tsx     # Restaurant settings (address, delivery radius)
 │   │   ├── account/page.tsx      # Profile + Staff management (owner only)
 │   │   ├── reports/page.tsx      # Reports (coming soon, owner only)
-│   │   ├── customers/page.tsx    # Customers (coming soon, owner only)
-│   │   └── website/page.tsx      # Website Studio (coming soon, owner only)
+│   │   ├── customers/page.tsx    # Reviews management (owner only)
 │   ├── globals.css               # Global styles + Tailwind imports
 │   └── layout.tsx                # Root layout (fonts, metadata)
 │
@@ -122,12 +133,14 @@ src/
 ## Key Features
 
 ### Customer Storefront
-- Homepage with hero, bestsellers (from API), how-it-works
+- Homepage with hero, bestsellers (from API), reviews section, how-it-works
 - Full menu with categories and search
 - Cart with persistent localStorage
 - Checkout with geolocation (delivery radius check), COD + Razorpay
 - Real-time order status via WebSocket
 - Order success popup with redirect to orders page
+- Review system — rate delivered orders (1-5 stars + comment)
+- Public reviews displayed on homepage (3 initially, "View More" expands)
 
 ### Restaurant Admin Panel
 - Role-based access: Owner sees all, Staff sees Dashboard/Orders/Menu/Account
@@ -136,6 +149,7 @@ src/
 - Menu management with image file upload
 - Order management with status transitions
 - Staff management (owner adds/removes staff accounts)
+- Reviews management (owner can view and delete reviews)
 - Business settings with "Detect Location" (reverse geocoding)
 - History with date filtering and revenue breakdown (owner only)
 

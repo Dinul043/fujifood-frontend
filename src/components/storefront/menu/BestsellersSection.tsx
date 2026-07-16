@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { addToCart } from '@/hooks/useCart'
 import api from '@/lib/api'
+import { resolveImageUrl } from '@/lib/image'
 
 /**
  * BestsellersSection — Customer Favorites.
@@ -100,7 +101,7 @@ export function BestsellersSection() {
               {/* Image */}
               <div className="relative overflow-hidden" style={{ aspectRatio: '1/1' }}>
                 <img
-                  src={item.image_url || `/images/food/dish-${(item.id % 10) + 1}.png`}
+                  src={resolveImageUrl(item.image_url, item.id)}
                   alt={item.name}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { addToCart } from '@/hooks/useCart'
 import api from '@/lib/api'
+import { resolveImageUrl } from '@/lib/image'
 import { MobileReviews } from '@/components/mobile/MobileReviews'
 
 /**
@@ -154,7 +155,7 @@ export function MobileHomePage() {
               style={{ gap: '12px', padding: '12px', borderRadius: '12px', border: '1px solid #EEEAE5' }}
             >
               <img
-                src={item.image_url || `/images/food/dish-${(item.id % 10) + 1}.png`}
+                src={resolveImageUrl(item.image_url, item.id)}
                 alt={item.name}
                 className="flex-shrink-0 object-cover"
                 style={{ width: '56px', height: '56px', borderRadius: '10px' }}
@@ -168,7 +169,7 @@ export function MobileHomePage() {
                 </div>
               </div>
               <button
-                onClick={() => addToCart({ id: item.id, name: item.name, price: item.price, image: item.image_url || `/images/food/dish-${(item.id % 10) + 1}.png` })}
+                onClick={() => addToCart({ id: item.id, name: item.name, price: item.price, image: resolveImageUrl(item.image_url, item.id) })}
                 className="flex-shrink-0 flex items-center justify-center rounded-full bg-[#C8964B] text-white"
                 style={{ width: '32px', height: '32px' }}
                 aria-label={`Add ${item.name}`}

@@ -19,6 +19,24 @@ export interface CartItem {
 
 const GUEST_CART_KEY = 'fujifood_cart_guest'
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
+const BACKEND_URL = API_BASE.replace('/api/v1', '')
+
+function resolveImg(url: string | null | undefined, id: number): string {
+  if (!url) return `/images/food/dish-${(id % 10) + 1}.png`
+  if (url.startsWith('/uploads')) return `${BACKEND_URL}${url}`
+  return url
+}
+
+function mapCartData(data: any[]): CartItem[] {
+  return (data || []).map((i: any) => ({
+    id: i.menu_item_id,
+    menu_item_id: i.menu_item_id,
+    name: i.name,
+    price: i.price,
+    image: resolveImg(i.image_url, i.menu_item_id),
+    qty: i.quantity,
+  }))
+}
 
 function getToken(): string | undefined {
   return Cookies.get('fujifood_access_token')
@@ -79,7 +97,7 @@ export async function addToCart(item: { id: number; name: string; price: number;
     await apiPost('/cart/add', { menu_item_id: item.id, quantity: 1 })
     // Refresh from API
     const data = await apiGet('/cart/')
-    _items = (data || []).map((i: any) => ({ id: i.menu_item_id, menu_item_id: i.menu_item_id, name: i.name, price: i.price, image: i.image_url || `/images/food/dish-${(i.menu_item_id % 10) + 1}.png`, qty: i.quantity }))
+    _items = mapCartData(data)
   } else {
     const existing = _items.find(i => i.id === item.id)
     if (existing) { _items = _items.map(i => i.id === item.id ? { ...i, qty: i.qty + 1 } : i) }
@@ -94,7 +112,7 @@ export async function updateQty(id: number, qty: number) {
   if (isLoggedIn()) {
     await apiPatch('/cart/update', { menu_item_id: id, quantity: qty })
     const data = await apiGet('/cart/')
-    _items = (data || []).map((i: any) => ({ id: i.menu_item_id, menu_item_id: i.menu_item_id, name: i.name, price: i.price, image: i.image_url || `/images/food/dish-${(i.menu_item_id % 10) + 1}.png`, qty: i.quantity }))
+    _items = mapCartData(data)
   } else {
     _items = _items.map(i => i.id === id ? { ...i, qty } : i)
     saveGuestCart(_items)
@@ -106,7 +124,7 @@ export async function removeFromCart(id: number) {
   if (isLoggedIn()) {
     await apiDelete(`/cart/remove/${id}`)
     const data = await apiGet('/cart/')
-    _items = (data || []).map((i: any) => ({ id: i.menu_item_id, menu_item_id: i.menu_item_id, name: i.name, price: i.price, image: i.image_url || `/images/food/dish-${(i.menu_item_id % 10) + 1}.png`, qty: i.quantity }))
+    _items = mapCartData(data)
   } else {
     _items = _items.filter(i => i.id !== id)
     saveGuestCart(_items)
@@ -135,7 +153,7 @@ export function useCart() {
       if (isLoggedIn()) {
         try {
           const data = await apiGet('/cart/')
-          _items = (data || []).map((i: any) => ({ id: i.menu_item_id, menu_item_id: i.menu_item_id, name: i.name, price: i.price, image: i.image_url || `/images/food/dish-${(i.menu_item_id % 10) + 1}.png`, qty: i.quantity }))
+          _items = mapCartData(data)
         } catch { _items = [] }
       } else {
         _items = loadGuestCart()
@@ -158,3 +176,4 @@ export function useCart() {
 
   return { items, count, total, hydrated, addToCart, removeFromCart, updateQty, clearCart }
 }
+

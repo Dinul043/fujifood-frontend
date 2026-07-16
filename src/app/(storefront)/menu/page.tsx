@@ -5,6 +5,7 @@ import { addToCart } from '@/hooks/useCart'
 import { useToast } from '@/components/ui/Toast'
 import { useAuthGate } from '@/components/ui/AuthGate'
 import api from '@/lib/api'
+import { resolveImageUrl } from '@/lib/image'
 
 /**
  * Menu Page — Fetches from backend API, falls back to static data.
@@ -52,7 +53,7 @@ export default function MenuPage() {
         const apiItems: MenuItem[] = data.categories.flatMap((cat: any) =>
           cat.items.map((item: any) => ({
             id: item.id, name: item.name, price: item.price, category: cat.name,
-            rating: 4.5, img: item.image_url || `/images/food/dish-${(item.id % 10) + 1}.png`,
+            rating: 4.5, img: resolveImageUrl(item.image_url, item.id),
             veg: item.food_type === 'veg', bestseller: item.is_bestseller,
           }))
         )

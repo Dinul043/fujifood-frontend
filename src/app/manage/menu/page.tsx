@@ -12,6 +12,7 @@ export default function MenuPage() {
   const [submitting, setSubmitting] = useState(false)
   const [newCatName, setNewCatName] = useState('')
   const [addingCat, setAddingCat] = useState(false)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -41,10 +42,17 @@ export default function MenuPage() {
   }
 
   const deleteItem = async (id: string) => {
-    if (!confirm('Delete this item?')) return
     try {
       await api.delete(`/menu/manage/items/${id}`)
       setItems(prev => prev.filter(i => i.id !== id))
+      setDeleteId(null)
+    } catch {}
+  }
+
+  const toggleBestseller = async (item: any) => {
+    try {
+      await api.patch(`/menu/manage/items/${item.id}`, { is_bestseller: !item.is_bestseller })
+      setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_bestseller: !i.is_bestseller } : i))
     } catch {}
   }
 
@@ -252,36 +260,57 @@ export default function MenuPage() {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                {/* Toggle */}
-                <button
-                  onClick={() => toggleAvailability(item)}
-                  style={{
-                    width: 44,
-                    height: 24,
-                    borderRadius: 12,
-                    border: 'none',
-                    background: item.is_available ? '#C8964B' : '#E0E0E0',
-                    cursor: 'pointer',
-                    position: 'relative',
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  <span style={{
-                    width: 18,
-                    height: 18,
-                    borderRadius: '50%',
-                    background: '#fff',
-                    position: 'absolute',
-                    top: 3,
-                    left: item.is_available ? 23 : 3,
-                    transition: 'all 0.2s ease',
-                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                  }} />
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {/* Availability Toggle */}
+                  <button
+                    onClick={() => toggleAvailability(item)}
+                    style={{
+                      width: 44,
+                      height: 24,
+                      borderRadius: 12,
+                      border: 'none',
+                      background: item.is_available ? '#C8964B' : '#E0E0E0',
+                      cursor: 'pointer',
+                      position: 'relative',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <span style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: '50%',
+                      background: '#fff',
+                      position: 'absolute',
+                      top: 3,
+                      left: item.is_available ? 23 : 3,
+                      transition: 'all 0.2s ease',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                    }} />
+                  </button>
+
+                  {/* Bestseller Toggle */}
+                  <button
+                    onClick={() => toggleBestseller(item)}
+                    style={{
+                      height: 24,
+                      padding: '0 8px',
+                      borderRadius: 6,
+                      border: item.is_bestseller ? '1px solid #C8964B' : '1px solid #E8E4DE',
+                      background: item.is_bestseller ? '#FDF6EC' : '#fff',
+                      color: item.is_bestseller ? '#C8964B' : '#AAA',
+                      cursor: 'pointer',
+                      fontSize: 10,
+                      fontWeight: 600,
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    {item.is_bestseller ? 'Bestseller' : 'Set Best'}
+                  </button>
+                </div>
 
                 {/* Delete */}
                 <button
-                  onClick={() => deleteItem(item.id)}
+                  onClick={() => setDeleteId(item.id)}
                   style={{
                     width: 32,
                     height: 32,
@@ -304,6 +333,19 @@ export default function MenuPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+      {/* Delete Confirmation Modal */}
+      {deleteId && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 340, width: '90%', textAlign: 'center' }}>
+            <p style={{ fontSize: 16, fontWeight: 600, color: '#1A1A1A', marginBottom: 8 }}>Delete this item?</p>
+            <p style={{ fontSize: 13, color: '#888', marginBottom: 20 }}>This action cannot be undone.</p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => setDeleteId(null)} style={{ flex: 1, height: 40, borderRadius: 10, border: '1px solid #E8E4DE', background: '#fff', color: '#666', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => deleteItem(deleteId)} style={{ flex: 1, height: 40, borderRadius: 10, border: 'none', background: '#DC2626', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Delete</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

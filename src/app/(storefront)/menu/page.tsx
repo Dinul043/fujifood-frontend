@@ -53,7 +53,7 @@ export default function MenuPage() {
         const apiItems: MenuItem[] = data.categories.flatMap((cat: any) =>
           cat.items.map((item: any) => ({
             id: item.id, name: item.name, price: item.price, category: cat.name,
-            rating: 4.5, img: resolveImageUrl(item.image_url, item.id),
+            rating: item.avg_rating || 0, img: resolveImageUrl(item.image_url, item.id),
             veg: item.food_type === 'veg', bestseller: item.is_bestseller,
           }))
         )

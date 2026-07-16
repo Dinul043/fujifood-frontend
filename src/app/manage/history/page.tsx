@@ -29,7 +29,7 @@ export default function HistoryPage() {
           page++
         }
         setOrders(allOrders)
-      } catch {
+      } catch {}
       finally { setLoading(false) }
     })()
   }, [])

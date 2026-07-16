@@ -102,7 +102,7 @@ export function MobileHeader() {
       {/* Location bar below header */}
       <div
         className="fixed left-0 right-0 z-40 bg-[#1E1E1E] border-b border-[#2A2A2A]"
-        style={{ top: '56px', height: '40px', paddingLeft: '20px', paddingRight: '20px' }}
+        style={{ top: '56px', height: '40px', paddingLeft: '10px', paddingRight: '10px' }}
       >
         <button className="flex items-center h-full w-full" style={{ gap: '8px' }} onClick={detectLocation}>
           <svg className="w-[14px] h-[14px] text-[#C8964B] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -166,7 +166,7 @@ export function MobileHeader() {
             {[
               { label: 'Home', href: '/' },
               { label: 'Menu', href: '/menu' },
-              { label: 'Offers', href: '#offers' },
+             // { label: 'Offers', href: '#offers' },
               { label: 'My Orders', href: '/orders' },
               { label: 'About Us', href: '#about' },
             ].map((link) => (

@@ -80,6 +80,18 @@ export default function CheckoutPage() {
 
     setLoading(true)
     try {
+      // Step 0: Validate delivery address against radius (if no geolocation was used)
+      if (!locationBlocked && !lat) {
+        try {
+          const { data: geoCheck } = await api.post('/geo/check-delivery-address', { address: line1 + ' ' + line2, city, pincode })
+          if (!geoCheck.deliverable) {
+            setError(geoCheck.message)
+            setLoading(false)
+            return
+          }
+        } catch {}
+      }
+
       // Step 1: Create order
       const orderData = {
         items: items.map((i) => ({ menu_item_id: i.id, quantity: i.qty })),

@@ -32,6 +32,18 @@ export default function CheckoutPage() {
   const [lat, setLat] = useState<number | null>(null)
   const [lng, setLng] = useState<number | null>(null)
 
+  // Saved addresses
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([])
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get('/addresses/')
+        setSavedAddresses(data || [])
+      } catch {}
+    })()
+  }, [])
+
   const handleUseLocation = () => {
     if (!navigator.geolocation) { setError('Geolocation not supported'); return }
     setGeoLoading(true); setDeliveryWarning(''); setLocationBlocked(false)
@@ -207,6 +219,17 @@ export default function CheckoutPage() {
                   <span style={{ fontSize: 12, color: '#AAA' }}>or enter address manually</span>
                 </div>
                 {deliveryWarning && <div style={{ marginBottom: '16px', padding: '10px 14px', borderRadius: 10, background: '#FEF2F2', border: '1px solid #FECACA' }}><p style={{ fontSize: 12, color: '#DC2626', fontWeight: 500 }}>{deliveryWarning}</p><p style={{ fontSize: 11, color: '#888', marginTop: 4 }}>If you&apos;re ordering for someone within our delivery area, clear your location and type the delivery address manually.</p></div>}
+                {/* Saved addresses */}
+                {savedAddresses.length > 0 && (
+                  <div style={{ marginBottom: 16, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {savedAddresses.map(a => (
+                      <button key={a.id} onClick={() => { setLine1(a.address_line1); setLine2(a.address_line2 || ''); setCity(a.city); setState(a.state); setPincode(a.pincode); setLocationBlocked(false); setDeliveryWarning('') }} style={{ height: 32, padding: '0 12px', borderRadius: 8, border: '1px solid #E8E4DE', background: '#fff', color: '#1A1A1A', fontSize: 12, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <svg width={12} height={12} fill="none" viewBox="0 0 24 24" stroke="#C8964B" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0115 0z" /></svg>
+                        {a.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div className="grid grid-cols-2" style={{ gap: '16px' }}>
                   <div className="col-span-2">
                     <label className="block font-medium text-[#1A1A1A]" style={{ fontSize: '12px', marginBottom: '6px' }}>Address Line 1 *</label>
@@ -272,13 +295,21 @@ export default function CheckoutPage() {
               <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0115 0z" /></svg>
               {geoLoading ? 'Detecting...' : 'Use My Location'}
             </button>
+            {/* Saved address buttons */}
+            {savedAddresses.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+                {savedAddresses.map(a => (
+                  <button key={a.id} onClick={() => { setLine1(a.address_line1); setLine2(a.address_line2 || ''); setCity(a.city); setPincode(a.pincode); setLocationBlocked(false); setDeliveryWarning('') }} style={{ height: 28, padding: '0 10px', borderRadius: 6, border: '1px solid #E8E4DE', background: '#fff', color: '#1A1A1A', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>{a.label}</button>
+                ))}
+              </div>
+            )}
             {deliveryWarning && <p style={{ fontSize: 11, color: '#D97706', marginBottom: 12, padding: '8px 12px', borderRadius: 8, background: '#FFF7ED' }}>{deliveryWarning}</p>}
-            <div className="flex flex-col" style={{ gap: '12px' }}>
-              <input value={line1} onChange={(e) => setLine1(e.target.value)} placeholder="House/Flat, Street *" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '40px', borderRadius: '10px', fontSize: '13px', paddingLeft: '12px' }} />
-              <input value={line2} onChange={(e) => setLine2(e.target.value)} placeholder="Landmark, Area" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '40px', borderRadius: '10px', fontSize: '13px', paddingLeft: '12px' }} />
-              <div className="grid grid-cols-2" style={{ gap: '12px' }}>
-                <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '40px', borderRadius: '10px', fontSize: '13px', paddingLeft: '12px' }} />
-                <input value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Pincode" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '40px', borderRadius: '10px', fontSize: '13px', paddingLeft: '12px' }} />
+            <div className="flex flex-col" style={{ gap: '10px' }}>
+              <input value={line1} onChange={(e) => setLine1(e.target.value)} placeholder="House/Flat, Street *" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '38px', borderRadius: '8px', fontSize: '13px', paddingLeft: '10px' }} />
+              <input value={line2} onChange={(e) => setLine2(e.target.value)} placeholder="Landmark, Area" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '38px', borderRadius: '8px', fontSize: '13px', paddingLeft: '10px' }} />
+              <div className="grid grid-cols-2" style={{ gap: '10px' }}>
+                <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '38px', borderRadius: '8px', fontSize: '13px', paddingLeft: '10px' }} />
+                <input value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Pincode" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '38px', borderRadius: '8px', fontSize: '13px', paddingLeft: '10px' }} />
               </div>
             </div>
           </div>

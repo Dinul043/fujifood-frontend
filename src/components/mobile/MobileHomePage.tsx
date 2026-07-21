@@ -136,7 +136,7 @@ export function MobileHomePage() {
       {/* ─── Delivery Info ──────────────────────────────────────── */}
       <div style={{ margin: '0 20px', padding: '10px 14px', borderRadius: 10, background: '#FDF6EC', display: 'flex', alignItems: 'center', gap: 8 }}>
         <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="#C8964B" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0115 0z" /></svg>
-        <p style={{ fontSize: 11, fontWeight: 500, color: '#8B6A2F' }}>We deliver within 5 km. Free delivery above ₹299.</p>
+        <p style={{ fontSize: 11, fontWeight: 500, color: '#8B6A2F' }}>We deliver within {restaurant?.delivery_radius_km || 5} km. Free delivery above ₹{restaurant?.free_delivery_above || 299}.</p>
       </div>
 
       {/* ─── Customer Favorites (vertical list) ────────────────── */}

@@ -15,6 +15,22 @@ export default function CheckoutPage() {
   const [error, setError] = useState('')
   const [orderSuccess, setOrderSuccess] = useState<{ orderNumber: string } | null>(null)
 
+  // Customer phone check
+  const [customerPhone, setCustomerPhone] = useState('')
+
+  // Load user phone on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await api.get('/auth/me')
+        // Only set phone if it's a real phone number (not their email)
+        if (data.phone && data.phone !== data.email && /^\d{10}$/.test(data.phone)) {
+          setCustomerPhone(data.phone)
+        }
+      } catch {}
+    })()
+  }, [])
+
   // Address fields
   const [line1, setLine1] = useState('')
   const [line2, setLine2] = useState('')
@@ -89,6 +105,7 @@ export default function CheckoutPage() {
     if (!line1.trim()) { setError('Address line 1 is required'); return }
     if (!city.trim()) { setError('City is required'); return }
     if (!pincode.trim() || pincode.length < 5) { setError('Enter a valid pincode'); return }
+    if (!customerPhone.trim() || customerPhone.length < 10) { setError('Please enter your 10-digit mobile number for delivery contact'); return }
 
     setLoading(true)
     try {
@@ -102,10 +119,13 @@ export default function CheckoutPage() {
         }
       }
 
+      // Step 0b: Save phone if newly provided or updated
+      try { await api.patch(`/auth/profile?phone=${encodeURIComponent(customerPhone)}`) } catch {}
+
       // Step 1: Create order
       const orderData = {
         items: items.map((i) => ({ menu_item_id: i.id, quantity: i.qty })),
-        delivery_address: { line1, line2, city, state, pincode },
+        delivery_address: { line1, line2, city, state, pincode, phone: customerPhone },
         payment_method: paymentMethod,
       }
       const { data: order } = await api.post('/orders/place', orderData)
@@ -250,6 +270,28 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
+              {/* Phone number — always required for delivery */}
+              <div className="bg-white" style={{ padding: '24px 32px', borderRadius: '20px', border: '1px solid #EEEAE5' }}>
+                <h3 className="font-heading font-bold text-[#1A1A1A]" style={{ fontSize: '18px', marginBottom: 6 }}>Contact Number</h3>
+                <p style={{ fontSize: 13, color: '#888', marginBottom: 12 }}>We&apos;ll share this with our delivery team to reach you.</p>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    value={customerPhone}
+                    onChange={e => setCustomerPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    placeholder="10-digit mobile number *"
+                    maxLength={10}
+                    className="w-full bg-[#FAFAF8] text-[#1A1A1A] outline-none transition-all"
+                    style={{ height: '44px', borderRadius: '10px', fontSize: '14px', paddingLeft: '14px', paddingRight: '50px', border: `1.5px solid ${customerPhone.length === 0 ? '#E8E4DE' : customerPhone.length === 10 ? '#16A34A' : '#DC2626'}` }}
+                  />
+                  <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 12, fontWeight: 600, color: customerPhone.length === 10 ? '#16A34A' : customerPhone.length > 0 ? '#DC2626' : '#AAA' }}>
+                    {customerPhone.length}/10
+                  </span>
+                </div>
+                {customerPhone.length > 0 && customerPhone.length < 10 && (
+                  <p style={{ fontSize: 12, color: '#DC2626', marginTop: 6 }}>{10 - customerPhone.length} more digit{10 - customerPhone.length !== 1 ? 's' : ''} needed</p>
+                )}
+              </div>
+
               {/* Payment */}
               <div className="bg-white" style={{ padding: '32px', borderRadius: '20px', border: '1px solid #EEEAE5' }}>
                 <h3 className="font-heading font-bold text-[#1A1A1A]" style={{ fontSize: '18px', marginBottom: '24px' }}>Payment Method</h3>
@@ -303,15 +345,27 @@ export default function CheckoutPage() {
                 ))}
               </div>
             )}
-            {deliveryWarning && <p style={{ fontSize: 11, color: '#D97706', marginBottom: 12, padding: '8px 12px', borderRadius: 8, background: '#FFF7ED' }}>{deliveryWarning}</p>}
+            {deliveryWarning && <p style={{ fontSize: 11, color: '#DC2626', marginBottom: 12, padding: '8px 12px', borderRadius: 8, background: '#FEF2F2', border: '1px solid #FECACA' }}>{deliveryWarning}</p>}
             <div className="flex flex-col" style={{ gap: '10px' }}>
-              <input value={line1} onChange={(e) => setLine1(e.target.value)} placeholder="House/Flat, Street *" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '38px', borderRadius: '8px', fontSize: '13px', paddingLeft: '10px' }} />
+              <input value={line1} onChange={(e) => { setLine1(e.target.value); handleManualEdit() }} placeholder="House/Flat, Street *" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '38px', borderRadius: '8px', fontSize: '13px', paddingLeft: '10px' }} />
               <input value={line2} onChange={(e) => setLine2(e.target.value)} placeholder="Landmark, Area" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '38px', borderRadius: '8px', fontSize: '13px', paddingLeft: '10px' }} />
               <div className="grid grid-cols-2" style={{ gap: '10px' }}>
                 <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '38px', borderRadius: '8px', fontSize: '13px', paddingLeft: '10px' }} />
                 <input value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Pincode" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '38px', borderRadius: '8px', fontSize: '13px', paddingLeft: '10px' }} />
               </div>
             </div>
+          </div>
+          {/* Contact number — always required */}
+          <div className="bg-white" style={{ padding: '16px', borderRadius: '12px', border: '1px solid #EEEAE5', marginBottom: '16px' }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#1A1A1A', marginBottom: 4 }}>Contact Number</p>
+            <p style={{ fontSize: 11, color: '#888', marginBottom: 10 }}>Shared with delivery team.</p>
+            <div style={{ position: 'relative' }}>
+              <input value={customerPhone} onChange={e => setCustomerPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10-digit mobile number *" maxLength={10} className="w-full bg-[#FAFAF8] outline-none focus:border-[#C8964B]" style={{ height: '40px', borderRadius: '8px', fontSize: '13px', paddingLeft: '12px', paddingRight: '44px', border: `1.5px solid ${customerPhone.length === 0 ? '#E8E4DE' : customerPhone.length === 10 ? '#16A34A' : '#DC2626'}` }} />
+              <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11, fontWeight: 600, color: customerPhone.length === 10 ? '#16A34A' : customerPhone.length > 0 ? '#DC2626' : '#AAA' }}>{customerPhone.length}/10</span>
+            </div>
+            {customerPhone.length > 0 && customerPhone.length < 10 && (
+              <p style={{ fontSize: 11, color: '#DC2626', marginTop: 5 }}>{10 - customerPhone.length} more digit{10 - customerPhone.length !== 1 ? 's' : ''} needed</p>
+            )}
           </div>
           <div className="bg-white" style={{ padding: '20px', borderRadius: '16px', border: '1px solid #EEEAE5', marginBottom: '16px' }}>
             <h3 className="font-semibold text-[#1A1A1A]" style={{ fontSize: '15px', marginBottom: '12px' }}>Payment</h3>

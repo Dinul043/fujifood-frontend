@@ -19,7 +19,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState('all')
   const [loading, setLoading] = useState(true)
-  const [updating, setUpdating] = useState<string | null>(null)
+  const [updating, setUpdating] = useState<number | null>(null)
 
   const fetchOrders = async () => {
     try {
@@ -44,14 +44,12 @@ export default function OrdersPage() {
     ? orders
     : orders.filter(o => activeTab === 'cancelled' ? ['cancelled', 'rejected'].includes(o.status) : o.status === activeTab)
 
-  const updateStatus = async (orderId: string, status: string) => {
+  const updateStatus = async (orderId: number, newStatus: string) => {
     setUpdating(orderId)
     try {
-      await api.patch(`/orders/manage/${orderId}/status`, { status })
+      await api.patch(`/orders/manage/${orderId}/status`, { status: newStatus })
       await fetchOrders()
-    } catch {
-      // handle error
-    } finally {
+    } catch {} finally {
       setUpdating(null)
     }
   }
@@ -129,7 +127,16 @@ export default function OrdersPage() {
             >
               {/* Order header */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <span style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>#{order.order_number}</span>
+                <div>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A' }}>#{order.order_number}</span>
+                  {order.customer_name && <p style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{order.customer_name}</p>}
+                  {order.customer_phone && (
+                    <a href={`tel:${order.customer_phone}`} style={{ fontSize: 11, color: '#C8964B', fontWeight: 500, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                      <svg width={10} height={10} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.338c0-.54.198-1.065.567-1.478l1.38-1.516A1.875 1.875 0 015.75 2.625h12.5a1.875 1.875 0 011.553.719l1.38 1.516c.37.412.567.938.567 1.478v13.5a1.875 1.875 0 01-1.875 1.875H4.125A1.875 1.875 0 012.25 19.838V6.338z" /></svg>
+                      {order.customer_phone}
+                    </a>
+                  )}
+                </div>
                 <span style={{
                   fontSize: 11,
                   fontWeight: 500,
@@ -161,6 +168,19 @@ export default function OrdersPage() {
               <p style={{ fontSize: 11, color: '#BBB', marginBottom: 12 }}>
                 {order.created_at ? new Date(order.created_at).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
               </p>
+
+              {/* Delivery Address */}
+              {order.delivery_address && (
+                <div style={{ marginBottom: 12, padding: '8px 10px', borderRadius: 8, background: '#F8F8F6' }}>
+                  <p style={{ fontSize: 10, color: '#AAA', marginBottom: 2, fontWeight: 500 }}>DELIVER TO</p>
+                  <p style={{ fontSize: 12, color: '#444', lineHeight: '17px' }}>
+                    {[order.delivery_address.line1, order.delivery_address.line2, order.delivery_address.city, order.delivery_address.pincode].filter(Boolean).join(', ')}
+                  </p>
+                  {order.delivery_address.phone && (
+                    <a href={`tel:${order.delivery_address.phone}`} style={{ fontSize: 11, color: '#C8964B', fontWeight: 500, textDecoration: 'none' }}>{order.delivery_address.phone}</a>
+                  )}
+                </div>
+              )}
 
               {/* Actions */}
               {getActions(order).length > 0 && (

@@ -62,9 +62,15 @@ export default function OrdersPage() {
           { label: 'Reject', status: 'rejected', bg: '#FEF2F2', color: '#DC2626' },
         ]
       case 'confirmed':
-        return [{ label: 'Start Preparing', status: 'preparing', bg: '#C8964B', color: '#fff' }]
+        return [
+          { label: 'Start Preparing', status: 'preparing', bg: '#C8964B', color: '#fff' },
+          { label: 'Cancel', status: 'cancelled', bg: '#FEF2F2', color: '#DC2626' },
+        ]
       case 'preparing':
-        return [{ label: 'Mark Ready', status: 'ready', bg: '#2563EB', color: '#fff' }]
+        return [
+          { label: 'Mark Ready', status: 'ready', bg: '#2563EB', color: '#fff' },
+          { label: 'Cancel', status: 'cancelled', bg: '#FEF2F2', color: '#DC2626' },
+        ]
       case 'ready':
         return [{ label: 'Mark Delivered', status: 'delivered', bg: '#16A34A', color: '#fff' }]
       default:

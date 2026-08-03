@@ -29,6 +29,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<number | null>(null)
   const [cancelModal, setCancelModal] = useState<{ id: number; orderNumber: string; items: string } | null>(null)
+  const [cancelError, setCancelError] = useState('')
   const [cancelling, setCancelling] = useState(false)
   const [reviewModal, setReviewModal] = useState<{ orderId: number; orderNumber: string; items: string } | null>(null)
   const [reviewRating, setReviewRating] = useState(0)
@@ -158,7 +159,7 @@ export default function OrdersPage() {
                     {/* Cancel button for pending/confirmed orders */}
                     {(order.status === 'pending' || order.status === 'confirmed') && (
                       <button
-                        onClick={() => setCancelModal({ id: order.id, orderNumber: order.order_number, items: order.items.map(i => i.item_name).join(', ') })}
+                        onClick={() => { setCancelModal({ id: order.id, orderNumber: order.order_number, items: order.items.map(i => i.item_name).join(', ') }); setCancelError('') }}
                         style={{ marginTop: 8, fontSize: 12, color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 500 }}
                       >
                         Cancel Order
@@ -280,6 +281,7 @@ export default function OrdersPage() {
             <p style={{ fontSize: 14, color: '#888', marginBottom: 24 }}>
               Are you sure you want to cancel <span style={{ fontWeight: 600, color: '#1A1A1A' }}>{cancelModal.items}</span>? This action cannot be undone.
             </p>
+            {cancelError && <p style={{ fontSize: 12, color: '#DC2626', background: '#FEF2F2', padding: '8px 12px', borderRadius: 8, marginBottom: 16 }}>{cancelError}</p>}
             <div style={{ display: 'flex', gap: 12 }}>
               <button
                 onClick={() => setCancelModal(null)}
@@ -290,12 +292,13 @@ export default function OrdersPage() {
               <button
                 onClick={async () => {
                   setCancelling(true)
+                  setCancelError('')
                   try {
                     await api.post(`/orders/my-orders/${cancelModal.id}/cancel`)
                     setOrders(prev => prev.map(o => o.id === cancelModal.id ? { ...o, status: 'cancelled' } : o))
                     setCancelModal(null)
                   } catch (e: any) {
-                    setCancelModal(null)
+                    setCancelError(e.response?.data?.detail || 'Could not cancel. Order may already be preparing.')
                   } finally { setCancelling(false) }
                 }}
                 disabled={cancelling}

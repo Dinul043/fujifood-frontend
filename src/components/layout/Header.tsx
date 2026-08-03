@@ -1,42 +1,96 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { useCart } from '@/hooks/useCart'
+import api from '@/lib/api'
 
 const LOCATION_KEY = 'fujifood_user_location'
+const LOCATION_COORDS_KEY = 'fujifood_location_coords'
+const LOCATION_CHECKED_KEY = 'fujifood_location_checked'
 
 /**
- * Header — Premium restaurant navigation.
- * Includes search overlay and active nav detection.
+ * Check delivery availability using stored coordinates.
+ * Called on every page load if coords exist.
  */
+async function checkStoredCoords(
+  setOutOfRange: (v: boolean) => void,
+  setOutOfRangeMsg: (v: string) => void
+) {
+  try {
+    const stored = localStorage.getItem(LOCATION_COORDS_KEY)
+    if (!stored) return
+    const { lat, lng } = JSON.parse(stored)
+    // Use api instance (handles baseURL correctly)
+    const { default: api } = await import('@/lib/api')
+    const { data } = await api.post('/geo/check-delivery', { latitude: lat, longitude: lng })
+    if (!data.deliverable) {
+      setOutOfRangeMsg(data.message)
+      setOutOfRange(true)
+    }
+  } catch {}
+}
+
 export function Header() {
   const [searchOpen, setSearchOpen] = useState(false)
   const { count } = useCart()
   const pathname = usePathname()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [location, setLocation] = useState('Detect Location')
+  const [location, setLocation] = useState('Select Location')
   const [detecting, setDetecting] = useState(false)
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([])
+  const [outOfRange, setOutOfRange] = useState(false)
+  const [outOfRangeMsg, setOutOfRangeMsg] = useState('')
+  const dropRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    setIsLoggedIn(document.cookie.includes('fujifood_access_token'))
-    // Load saved location from localStorage
+    const isAuth = document.cookie.includes('fujifood_access_token')
+    setIsLoggedIn(isAuth)
+
+    // Load saved location text
     const saved = localStorage.getItem(LOCATION_KEY)
-    if (saved) {
-      setLocation(saved)
-    } else {
-      // Auto-detect on first visit
+    if (saved) setLocation(saved)
+
+    // Auto-detect ONLY on very first visit (no coords stored at all)
+    if (!localStorage.getItem(LOCATION_CHECKED_KEY) && !localStorage.getItem(LOCATION_COORDS_KEY)) {
+      localStorage.setItem(LOCATION_CHECKED_KEY, '1')
       detectLocation()
+    } else if (localStorage.getItem(LOCATION_COORDS_KEY) && !sessionStorage.getItem('zone_checked')) {
+      // Coords exist but not checked this session → silently verify zone
+      sessionStorage.setItem('zone_checked', '1')
+      checkStoredCoords(setOutOfRange, setOutOfRangeMsg)
     }
+
+    // Load saved addresses if logged in
+    if (isAuth) {
+      api.get('/addresses/').then(({ data }) => setSavedAddresses(data || [])).catch(() => {})
+    }
+
+    // Close dropdown on outside click
+    const handleClick = (e: MouseEvent) => {
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
   const detectLocation = () => {
     if (!navigator.geolocation) return
     setDetecting(true)
+    setDropdownOpen(false)
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
+        const { latitude, longitude } = pos.coords
+        // Save coords for future zone checks
+        localStorage.setItem(LOCATION_COORDS_KEY, JSON.stringify({ lat: latitude, lng: longitude }))
+        sessionStorage.setItem('zone_checked', '1')
         try {
-          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json`)
+          const { data: check } = await api.post('/geo/check-delivery', { latitude, longitude })
+          if (!check.deliverable) { setOutOfRangeMsg(check.message); setOutOfRange(true) }
+          const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`)
           const g = await r.json()
           const area = g.address?.suburb || g.address?.neighbourhood || g.address?.city_district || ''
           const city = g.address?.city || g.address?.town || g.address?.state_district || ''
@@ -50,6 +104,18 @@ export function Header() {
       () => { setDetecting(false); setLocation('Enable Location') },
       { enableHighAccuracy: true, timeout: 10000 }
     )
+  }
+
+  const selectAddress = async (a: any) => {
+    const label = `${a.label} — ${a.address_line1}, ${a.city}`
+    setLocation(label)
+    localStorage.setItem(LOCATION_KEY, label)
+    setDropdownOpen(false)
+    // Check if address is in range
+    try {
+      const { data } = await api.post('/geo/check-delivery-address', { address: a.address_line1, city: a.city, pincode: a.pincode })
+      if (!data.deliverable) { setOutOfRangeMsg(data.message); setOutOfRange(true) }
+    } catch {}
   }
 
   const navLinks = [
@@ -87,24 +153,60 @@ export function Header() {
           {/* Divider */}
           <div className="w-[1px] h-[40px] bg-[#333]" style={{ marginRight: '32px' }} />
 
-          {/* Location selector */}
-          <button className="flex items-center gap-[12px] group" style={{ marginRight: '80px' }} onClick={detectLocation}>
-            <svg className="w-[18px] h-[18px] text-[#C8964B] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0 1 15 0Z" />
-            </svg>
-            <div className="flex flex-col leading-tight">
-              <span className="text-[11px] text-[#888]">Delivering to</span>
-              <div className="flex items-center gap-[6px]">
-                <span className="text-[14px] text-white font-medium group-hover:text-[#C8964B] transition-colors duration-200" style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {detecting ? 'Detecting...' : location}
-                </span>
-                <svg className="w-[12px] h-[12px] text-[#666]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                </svg>
+          {/* Location selector with dropdown */}
+          <div ref={dropRef} style={{ position: 'relative', marginRight: '80px' }}>
+            <button
+              className="flex items-center gap-[12px] group"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+            >
+              <svg className="w-[18px] h-[18px] text-[#C8964B] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0 1 15 0Z" />
+              </svg>
+              <div className="flex flex-col leading-tight">
+                <span className="text-[11px] text-[#888]">Delivering to</span>
+                <div className="flex items-center gap-[6px]">
+                  <span className="text-[14px] text-white font-medium group-hover:text-[#C8964B] transition-colors duration-200" style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {detecting ? 'Detecting...' : location}
+                  </span>
+                  <svg className="w-[12px] h-[12px] text-[#666] transition-transform duration-200" style={{ transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0)' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                  </svg>
+                </div>
               </div>
-            </div>
-          </button>
+            </button>
+
+            {/* Dropdown */}
+            {dropdownOpen && (
+              <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: 12, width: 280, background: '#1E1E1E', border: '1px solid #333', borderRadius: 14, boxShadow: '0 16px 40px rgba(0,0,0,0.4)', zIndex: 60, overflow: 'hidden' }}>
+                {/* Detect location option */}
+                <button onClick={detectLocation} disabled={detecting} style={{ width: '100%', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', borderBottom: '1px solid #2A2A2A', cursor: 'pointer', transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = '#252525')} onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+                  <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="#C8964B" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0115 0z" /></svg>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: '#C8964B' }}>{detecting ? 'Detecting...' : 'Use My Location'}</span>
+                </button>
+                {/* Saved addresses */}
+                {savedAddresses.length > 0 && (
+                  <>
+                    <p style={{ fontSize: 10, color: '#555', padding: '8px 16px 4px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Saved Addresses</p>
+                    {savedAddresses.map(a => (
+                      <button key={a.id} onClick={() => selectAddress(a)} style={{ width: '100%', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', borderBottom: '1px solid #222', cursor: 'pointer', textAlign: 'left', transition: 'background 0.15s' }} onMouseEnter={e => (e.currentTarget.style.background = '#252525')} onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
+                        <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="#888" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>
+                        <div>
+                          <p style={{ fontSize: 12, fontWeight: 600, color: '#DDD' }}>{a.label}</p>
+                          <p style={{ fontSize: 11, color: '#666' }}>{a.address_line1}, {a.city}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </>
+                )}
+                {savedAddresses.length === 0 && (
+                  <p style={{ fontSize: 12, color: '#555', padding: '12px 16px', textAlign: 'center' }}>
+                    <a href="/profile" style={{ color: '#C8964B', textDecoration: 'none' }}>Add saved addresses</a> for quick selection
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ─── Center: Navigation ────────────────────────────── */}
@@ -194,6 +296,27 @@ export function Header() {
         </div>
       </div>
     </header>
+
+    {/* Out-of-range modal */}
+    {outOfRange && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(6px)' }}>
+        <div style={{ background: '#141414', borderRadius: 24, padding: 40, maxWidth: 420, width: '90%', textAlign: 'center', border: '1px solid #2A2A2A', boxShadow: '0 24px 80px rgba(0,0,0,0.5)' }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+            <svg width={28} height={28} fill="none" viewBox="0 0 24 24" stroke="#DC2626" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0115 0z" /></svg>
+          </div>
+          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 10 }}>Outside Delivery Zone</h2>
+          <p style={{ fontSize: 14, color: '#888', lineHeight: '22px', marginBottom: 28 }}>{outOfRangeMsg || 'Your selected location is outside our delivery area.'}</p>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button onClick={() => { setOutOfRange(false); setDropdownOpen(true) }} style={{ flex: 1, height: 44, borderRadius: 10, border: '1px solid #333', background: 'transparent', color: '#CCC', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              Change Location
+            </button>
+            <button onClick={() => setOutOfRange(false)} style={{ flex: 1, height: 44, borderRadius: 10, border: 'none', background: '#C8964B', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              Browse Menu
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {/* Search overlay */}
     {searchOpen && (

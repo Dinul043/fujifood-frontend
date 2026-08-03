@@ -67,7 +67,11 @@ export default function MenuPage() {
   }, [])
 
   const handleAddToCart = (item: MenuItem) => {
-    if (!requireAuth('add to cart')) return
+    if (!requireAuth('add to cart')) {
+      // Add to guest cart even while showing login popup
+      addToCart({ id: item.id, name: item.name, price: item.price, image: item.img })
+      return
+    }
     addToCart({ id: item.id, name: item.name, price: item.price, image: item.img })
     showToast(item.name)
   }

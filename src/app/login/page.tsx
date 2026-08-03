@@ -1,22 +1,32 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import api, { setTokens } from '@/lib/api'
 
-/**
- * Login / Signup Page — Compact, no scroll, premium.
- * Tabs: Sign In | Sign Up
- * Sign In: Email + OTP
- * Sign Up: Name + Email + OTP
- * Admin toggle at bottom
- */
-
 const TENANT_SLUG = 'a2b'
+const GUEST_CART_KEY = 'fujifood_cart_guest'
+
+// Sync guest cart to DB after login
+async function syncGuestCart() {
+  try {
+    const raw = localStorage.getItem(GUEST_CART_KEY)
+    if (!raw) return
+    const items = JSON.parse(raw)
+    if (!items || items.length === 0) return
+    for (const item of items) {
+      try {
+        await api.post('/cart/add', { menu_item_id: item.id, quantity: item.qty })
+      } catch {}
+    }
+    localStorage.removeItem(GUEST_CART_KEY)
+  } catch {}
+}
 
 export default function LoginPage() {
   const [tab, setTab] = useState<'signin' | 'signup'>('signin')
   const [mode, setMode] = useState<'customer' | 'admin'>('customer')
   const [step, setStep] = useState<'form' | 'otp' | 'complete'>('form')
+  const [returnTo, setReturnTo] = useState('/menu')
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -27,6 +37,18 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [devOtp, setDevOtp] = useState('')
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const rt = params.get('returnTo')
+    if (rt) setReturnTo(rt)
+  }, [])
+
+  const afterLogin = async (isAdmin = false) => {
+    if (isAdmin) { window.location.href = '/manage'; return }
+    await syncGuestCart()
+    window.location.href = returnTo
+  }
 
   const validateEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)
 
@@ -58,7 +80,7 @@ export default function LoginPage() {
       // Try email+password login (uses the same endpoint but with password)
       const { data } = await api.post('/auth/customer/login', { email, password, tenant_slug: TENANT_SLUG })
       setTokens(data.access_token, data.refresh_token)
-      window.location.href = '/'
+      await afterLogin()
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Invalid email or password')
     } finally { setLoading(false) }
@@ -72,9 +94,9 @@ export default function LoginPage() {
       const { data } = await api.post('/auth/otp/verify', { email, otp, tenant_slug: TENANT_SLUG })
       setTokens(data.access_token, data.refresh_token)
       if (tab === 'signup') {
-        setStep('complete')  // New users need to add phone + password
+        setStep('complete')
       } else {
-        window.location.href = '/'
+        await afterLogin()
       }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Invalid OTP')
@@ -89,7 +111,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await api.patch(`/auth/profile?name=${encodeURIComponent(name)}&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}`)
-      window.location.href = '/'
+      await afterLogin()
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to save profile')
     } finally { setLoading(false) }
@@ -103,7 +125,7 @@ export default function LoginPage() {
     try {
       const { data } = await api.post('/auth/admin/login', { phone, password, tenant_slug: TENANT_SLUG })
       setTokens(data.access_token, data.refresh_token)
-      window.location.href = '/manage'
+      await afterLogin(true)
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Invalid credentials')
     } finally { setLoading(false) }

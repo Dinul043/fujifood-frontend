@@ -143,6 +143,7 @@ export async function clearCart() {
 
 /**
  * useCart hook — loads from API if logged in, localStorage if guest.
+ * Re-loads on every mount to catch post-login state.
  */
 export function useCart() {
   const [items, setItems] = useState<CartItem[]>([])
@@ -163,8 +164,8 @@ export function useCart() {
       setHydrated(true)
     }
 
-    if (!_hydrated) load()
-    else { setItems([..._items]); setHydrated(true) }
+    // Always reload on mount to pick up post-login changes
+    load()
 
     const listener = () => setItems([..._items])
     _listeners.add(listener)

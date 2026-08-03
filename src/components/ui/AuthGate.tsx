@@ -59,7 +59,7 @@ export function AuthGateProvider({ children }: { children: React.ReactNode }) {
               </p>
 
               <a
-                href="/login"
+                href="/login?returnTo=/menu"
                 className="flex items-center justify-center w-full font-semibold text-white bg-[#C8964B] hover:bg-[#B5843F] transition-all"
                 style={{ height: '48px', borderRadius: '12px', fontSize: '15px', marginBottom: '12px' }}
               >

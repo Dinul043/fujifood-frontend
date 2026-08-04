@@ -37,6 +37,13 @@ export function MobileHeader() {
     if (isAuth) {
       api.get('/addresses/').then(({ data }) => setSavedAddresses(data || [])).catch(() => {})
     }
+
+    // Listen for address updates from profile page
+    const refreshAddresses = () => {
+      api.get('/addresses/').then(({ data }) => setSavedAddresses(data || [])).catch(() => {})
+    }
+    window.addEventListener('addresses-updated', refreshAddresses)
+    return () => window.removeEventListener('addresses-updated', refreshAddresses)
   }, [])
 
   const checkZone = async () => {

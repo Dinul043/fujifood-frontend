@@ -67,6 +67,12 @@ export function Header() {
       api.get('/addresses/').then(({ data }) => setSavedAddresses(data || [])).catch(() => {})
     }
 
+    // Listen for address updates from profile page
+    const refreshAddresses = () => {
+      api.get('/addresses/').then(({ data }) => setSavedAddresses(data || [])).catch(() => {})
+    }
+    window.addEventListener('addresses-updated', refreshAddresses)
+
     // Close dropdown on outside click
     const handleClick = (e: MouseEvent) => {
       if (dropRef.current && !dropRef.current.contains(e.target as Node)) {
@@ -74,7 +80,10 @@ export function Header() {
       }
     }
     document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      window.removeEventListener('addresses-updated', refreshAddresses)
+    }
   }, [])
 
   const detectLocation = () => {

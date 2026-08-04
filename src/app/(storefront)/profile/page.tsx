@@ -82,6 +82,8 @@ export default function ProfilePage() {
       setAddresses(data || [])
       setShowForm(false); setEditingAddr(null)
       setAddrForm({ label: 'Home', address_line1: '', address_line2: '', city: 'Chennai', state: 'Tamil Nadu', pincode: '' })
+      // Notify header to reload addresses
+      window.dispatchEvent(new CustomEvent('addresses-updated'))
     } catch (e: any) { setAddrError(e.response?.data?.detail || 'Failed to save') }
     finally { setAddrSaving(false) }
   }

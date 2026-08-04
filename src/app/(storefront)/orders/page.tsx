@@ -31,6 +31,20 @@ export default function OrdersPage() {
   const [cancelModal, setCancelModal] = useState<{ id: number; orderNumber: string; items: string } | null>(null)
   const [cancelError, setCancelError] = useState('')
   const [cancelling, setCancelling] = useState(false)
+  const [orderingAgain, setOrderingAgain] = useState<number | null>(null)
+
+  const handleOrderAgain = async (order: Order) => {
+    setOrderingAgain(order.id)
+    try {
+      const { addToCart } = await import('@/hooks/useCart')
+      for (const item of order.items) {
+        if (item.menu_item_id) {
+          await addToCart({ id: item.menu_item_id, name: item.item_name, price: item.item_price, image: '' })
+        }
+      }
+      window.location.href = '/cart'
+    } catch {} finally { setOrderingAgain(null) }
+  }
   const [reviewModal, setReviewModal] = useState<{ orderId: number; orderNumber: string; items: string } | null>(null)
   const [reviewRating, setReviewRating] = useState(0)
   const [reviewComment, setReviewComment] = useState('')
@@ -128,39 +142,60 @@ export default function OrdersPage() {
                         </div>
                       ))}
                     </div>
-                    {/* Status message */}
-                    {order.status === 'delivered' && (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '8px 12px', borderRadius: '8px', background: '#F0FDF4' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="#16A34A" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                          <span style={{ fontSize: '12px', fontWeight: 500, color: '#16A34A' }}>Order delivered successfully</span>
+                    {/* Premium Status Timeline */}
+                    {!['cancelled', 'rejected'].includes(order.status) && (() => {
+                      const steps = [
+                        { key: 'pending', label: 'Placed' },
+                        { key: 'confirmed', label: 'Confirmed' },
+                        { key: 'preparing', label: 'Preparing' },
+                        { key: 'ready', label: 'Ready' },
+                        { key: 'delivered', label: 'Delivered' },
+                      ]
+                      const currentIdx = steps.findIndex(s => s.key === order.status)
+                      return (
+                        <div style={{ marginBottom: 12, padding: '12px 0' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            {steps.map((step, idx) => {
+                              const done = idx <= currentIdx
+                              const active = idx === currentIdx
+                              return (
+                                <div key={step.key} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, position: 'relative' }}>
+                                  {idx < steps.length - 1 && (
+                                    <div style={{ position: 'absolute', top: 10, left: '50%', width: '100%', height: 2, background: idx < currentIdx ? '#C8964B' : '#E8E4DE', zIndex: 0 }} />
+                                  )}
+                                  <div style={{ width: 20, height: 20, borderRadius: '50%', background: done ? '#C8964B' : '#F0EDE8', border: `2px solid ${done ? '#C8964B' : '#E8E4DE'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1, transition: 'all 0.3s' }}>
+                                    {done && <svg width={10} height={10} fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>}
+                                  </div>
+                                  <p style={{ fontSize: 9, fontWeight: active ? 700 : 400, color: done ? '#C8964B' : '#AAA', marginTop: 4, textAlign: 'center', whiteSpace: 'nowrap' }}>{step.label}</p>
+                                </div>
+                              )
+                            })}
+                          </div>
                         </div>
+                      )
+                    })()}
+
+                    {/* Delivered: review + order again */}
+                    {order.status === 'delivered' && (
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                         {!reviewedOrders.has(order.id) ? (
-                          <button onClick={() => { setReviewModal({ orderId: order.id, orderNumber: order.order_number, items: order.items.map((i: any) => i.item_name).join(', ') }); setReviewRating(0); setReviewComment(''); setReviewError('') }} style={{ fontSize: 11, fontWeight: 600, color: '#C8964B', background: '#FDF6EC', border: '1px solid #F0E6D3', padding: '5px 12px', borderRadius: 6, cursor: 'pointer' }}>
+                          <button onClick={() => { setReviewModal({ orderId: order.id, orderNumber: order.order_number, items: order.items.map((i: any) => i.item_name).join(', ') }); setReviewRating(0); setReviewComment(''); setReviewError('') }} style={{ flex: 1, height: 36, fontSize: 12, fontWeight: 600, color: '#C8964B', background: '#FDF6EC', border: '1px solid #F0E6D3', borderRadius: 8, cursor: 'pointer' }}>
                             Write Review
                           </button>
                         ) : (
-                          <span style={{ fontSize: 11, fontWeight: 500, color: '#888', padding: '5px 12px' }}>Reviewed</span>
+                          <div style={{ flex: 1 }} />
                         )}
+                        <button onClick={() => handleOrderAgain(order)} disabled={orderingAgain === order.id} style={{ flex: 1, height: 36, fontSize: 12, fontWeight: 600, color: '#fff', background: '#C8964B', border: 'none', borderRadius: 8, cursor: 'pointer', opacity: orderingAgain === order.id ? 0.6 : 1 }}>
+                          {orderingAgain === order.id ? 'Adding...' : 'Order Again'}
+                        </button>
                       </div>
                     )}
-                    {order.status === 'preparing' && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '8px', background: '#EFF6FF' }}>
-                        <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        <span style={{ fontSize: '12px', fontWeight: 500, color: '#2563EB' }}>Your food is being prepared</span>
-                      </div>
-                    )}
-                    {order.status === 'confirmed' && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '8px', background: '#EFF6FF' }}>
-                        <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        <span style={{ fontSize: '12px', fontWeight: 500, color: '#2563EB' }}>Order confirmed by restaurant</span>
-                      </div>
-                    )}
+
                     {/* Cancel button for pending/confirmed orders */}
                     {(order.status === 'pending' || order.status === 'confirmed') && (
                       <button
                         onClick={() => { setCancelModal({ id: order.id, orderNumber: order.order_number, items: order.items.map(i => i.item_name).join(', ') }); setCancelError('') }}
-                        style={{ marginTop: 8, fontSize: 12, color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 500 }}
+                        style={{ marginTop: 4, fontSize: 12, color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA', padding: '6px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 500 }}
                       >
                         Cancel Order
                       </button>
@@ -196,17 +231,54 @@ export default function OrdersPage() {
             <div className="flex flex-col" style={{ gap: '12px' }}>
               {orders.map((order) => {
                 const sc = statusColors[order.status] || statusColors.pending
+                const steps = ['pending', 'confirmed', 'preparing', 'ready', 'delivered']
+                const currentIdx = steps.indexOf(order.status)
+                const isActive = !['cancelled', 'rejected'].includes(order.status)
                 return (
-                  <div key={order.id} className="bg-white" style={{ padding: '16px', borderRadius: '12px', border: '1px solid #EEEAE5' }}>
-                    <div className="flex items-center justify-between" style={{ marginBottom: '10px' }}>
-                      <p className="font-semibold text-[#1A1A1A]" style={{ fontSize: '13px' }}>#{order.order_number}</p>
-                      <span className="font-semibold capitalize" style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '6px', background: sc.bg, color: sc.text }}>{order.status}</span>
+                  <div key={order.id} className="bg-white" style={{ padding: '14px', borderRadius: '12px', border: '1px solid #EEEAE5' }}>
+                    {/* Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: '#1A1A1A' }}>#{order.order_number}</p>
+                      <span style={{ fontSize: 10, padding: '3px 8px', borderRadius: 6, background: sc.bg, color: sc.text, fontWeight: 600, textTransform: 'capitalize' }}>{order.status}</span>
                     </div>
-                    <p className="text-[#888]" style={{ fontSize: '11px', marginBottom: '8px' }}>{order.items.map((i) => `${i.item_name} x${i.quantity}`).join(', ')}</p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-[#888]" style={{ fontSize: '11px' }}>{new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
-                      <span className="font-bold text-[#C8964B]" style={{ fontSize: '15px' }}>&#8377;{order.total_amount}</span>
+                    {/* Items */}
+                    <p style={{ fontSize: 11, color: '#888', marginBottom: 8, lineHeight: '16px' }}>{order.items.map(i => `${i.item_name} x${i.quantity}`).join(', ')}</p>
+                    {/* Timeline — compact for mobile */}
+                    {isActive && (
+                      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10, gap: 2 }}>
+                        {steps.map((step, idx) => {
+                          const done = idx <= currentIdx
+                          return (
+                            <div key={step} style={{ display: 'flex', alignItems: 'center', flex: 1 }}>
+                              <div style={{ width: 14, height: 14, borderRadius: '50%', background: done ? '#C8964B' : '#E8E4DE', border: `2px solid ${done ? '#C8964B' : '#E8E4DE'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                {done && <svg width={7} height={7} fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>}
+                              </div>
+                              {idx < steps.length - 1 && <div style={{ flex: 1, height: 2, background: idx < currentIdx ? '#C8964B' : '#E8E4DE' }} />}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                    {/* Footer */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 10, color: '#BBB' }}>{new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: '#C8964B' }}>₹{order.total_amount}</span>
                     </div>
+                    {/* Order Again for delivered */}
+                    {order.status === 'delivered' && (
+                      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                        {!reviewedOrders.has(order.id) && (
+                          <button onClick={() => { setReviewModal({ orderId: order.id, orderNumber: order.order_number, items: order.items.map((i: any) => i.item_name).join(', ') }); setReviewRating(0); setReviewComment(''); setReviewError('') }} style={{ flex: 1, height: 32, fontSize: 11, fontWeight: 600, color: '#C8964B', background: '#FDF6EC', border: '1px solid #F0E6D3', borderRadius: 8, cursor: 'pointer' }}>Review</button>
+                        )}
+                        <button onClick={() => handleOrderAgain(order)} disabled={orderingAgain === order.id} style={{ flex: 1, height: 32, fontSize: 11, fontWeight: 600, color: '#fff', background: '#C8964B', border: 'none', borderRadius: 8, cursor: 'pointer' }}>
+                          {orderingAgain === order.id ? '...' : 'Order Again'}
+                        </button>
+                      </div>
+                    )}
+                    {/* Cancel */}
+                    {(order.status === 'pending' || order.status === 'confirmed') && (
+                      <button onClick={() => { setCancelModal({ id: order.id, orderNumber: order.order_number, items: order.items.map(i => i.item_name).join(', ') }); setCancelError('') }} style={{ marginTop: 8, width: '100%', height: 30, fontSize: 11, color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 6, cursor: 'pointer', fontWeight: 500 }}>Cancel Order</button>
+                    )}
                   </div>
                 )
               })}

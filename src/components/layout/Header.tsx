@@ -121,11 +121,18 @@ export function Header() {
     localStorage.setItem(LOCATION_KEY, label)
     setDropdownOpen(false)
     try {
-      const { data } = await api.post('/geo/check-delivery-address', { address: a.address_line1, city: a.city, pincode: a.pincode })
-      if (!data.deliverable) { setOutOfRangeMsg(data.message); setOutOfRange(true) }
-      // Mark session as checked
+      const { data } = await api.post('/geo/check-delivery-address', {
+        address: a.address_line1,
+        city: a.city,
+        pincode: a.pincode || '',
+      })
       sessionStorage.setItem('zone_checked', '1')
-    } catch {}
+      if (!data.deliverable) { setOutOfRangeMsg(data.message); setOutOfRange(true) }
+    } catch {
+      // Backend unreachable — show warning
+      setOutOfRangeMsg('Could not verify delivery area. Please ensure you are within our delivery zone.')
+      setOutOfRange(true)
+    }
   }
 
   const navLinks = [

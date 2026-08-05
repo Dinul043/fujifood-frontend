@@ -89,9 +89,17 @@ export function MobileHeader() {
     localStorage.setItem(LOCATION_KEY, label)
     setLocationSheetOpen(false)
     try {
-      const { data } = await api.post('/geo/check-delivery-address', { address: a.address_line1, city: a.city, pincode: a.pincode })
+      const { data } = await api.post('/geo/check-delivery-address', {
+        address: a.address_line1,
+        city: a.city,
+        pincode: a.pincode || '',
+      })
+      sessionStorage.setItem('zone_checked', '1')
       if (!data.deliverable) { setOutOfRangeMsg(data.message); setOutOfRange(true) }
-    } catch {}
+    } catch {
+      setOutOfRangeMsg('Could not verify delivery area. Please ensure you are within our delivery zone.')
+      setOutOfRange(true)
+    }
   }
 
   return (

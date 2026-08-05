@@ -134,9 +134,20 @@ export function MobileHomePage() {
       </section>
 
       {/* ─── Delivery Info ──────────────────────────────────────── */}
-      <div style={{ margin: '0 20px', padding: '10px 14px', borderRadius: 10, background: '#FDF6EC', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="#C8964B" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0115 0z" /></svg>
-        <p style={{ fontSize: 11, fontWeight: 500, color: '#8B6A2F' }}>We deliver within {restaurant?.delivery_radius_km || 5} km. Free delivery above ₹{restaurant?.free_delivery_above || 299}.</p>
+      <div style={{ margin: '0 20px', padding: '10px 14px', borderRadius: 10, background: '#FDF6EC', display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <svg width={13} height={13} fill="none" viewBox="0 0 24 24" stroke="#C8964B" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0115 0z" /></svg>
+          <p style={{ fontSize: 11, fontWeight: 500, color: '#8B6A2F' }}>{restaurant?.delivery_radius_km || 5} km delivery</p>
+        </div>
+        <span style={{ color: '#D4A853', fontSize: 11 }}>·</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <svg width={12} height={12} fill="none" viewBox="0 0 24 24" stroke="#C8964B" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <p style={{ fontSize: 11, fontWeight: 500, color: '#8B6A2F' }}>{restaurant?.avg_delivery_time_mins || 30} mins ETA</p>
+        </div>
+        {(restaurant?.free_delivery_above || 299) > 0 && <>
+          <span style={{ color: '#D4A853', fontSize: 11 }}>·</span>
+          <p style={{ fontSize: 11, fontWeight: 500, color: '#8B6A2F' }}>Free above ₹{restaurant?.free_delivery_above || 299}</p>
+        </>}
       </div>
 
       {/* ─── Customer Favorites (vertical list) ────────────────── */}

@@ -120,10 +120,11 @@ export function Header() {
     setLocation(label)
     localStorage.setItem(LOCATION_KEY, label)
     setDropdownOpen(false)
-    // Check if address is in range
     try {
       const { data } = await api.post('/geo/check-delivery-address', { address: a.address_line1, city: a.city, pincode: a.pincode })
       if (!data.deliverable) { setOutOfRangeMsg(data.message); setOutOfRange(true) }
+      // Mark session as checked
+      sessionStorage.setItem('zone_checked', '1')
     } catch {}
   }
 

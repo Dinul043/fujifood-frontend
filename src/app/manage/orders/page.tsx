@@ -28,6 +28,8 @@ export default function OrdersPage() {
   const [updating, setUpdating] = useState<number | null>(null)
   const [deliveryStaff, setDeliveryStaff] = useState<DeliveryStaff[]>([])
   const [isOwner, setIsOwner] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null)
+  const [currentUserRole, setCurrentUserRole] = useState<string>('')
   // Per-order assignment state
   const [assigningOrder, setAssigningOrder] = useState<number | null>(null)
   const [assignedToast, setAssignedToast] = useState<string | null>(null)
@@ -56,6 +58,8 @@ export default function OrdersPage() {
             setDeliveryStaff(staff || [])
           } catch {}
         }
+        setCurrentUserId(me.id)
+        setCurrentUserRole(me.role)
       } catch {}
     })()
   }, [])
@@ -89,6 +93,21 @@ export default function OrdersPage() {
       await fetchOrders()
     } catch (e: any) {
       setAssignedToast(e.response?.data?.detail || 'Failed to assign staff')
+      setTimeout(() => setAssignedToast(null), 3000)
+    } finally {
+      setAssigningOrder(null)
+    }
+  }
+
+  const selfAssign = async (orderId: number) => {
+    setAssigningOrder(orderId)
+    try {
+      await api.post(`/delivery/claim/${orderId}`)
+      setAssignedToast('You are assigned for this delivery')
+      setTimeout(() => setAssignedToast(null), 3000)
+      await fetchOrders()
+    } catch (e: any) {
+      setAssignedToast(e.response?.data?.detail || 'Could not assign')
       setTimeout(() => setAssignedToast(null), 3000)
     } finally {
       setAssigningOrder(null)
@@ -261,9 +280,55 @@ export default function OrdersPage() {
                 </div>
               )}
 
+              {/* ── Self-assign: staff can take a delivery ── */}
+              {!isOwner && order.status === 'ready' && !order.assigned_staff_id && (
+                <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 10, border: '1px solid #BFDBFE', background: '#EFF6FF' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 700, color: '#1D4ED8', marginBottom: 2 }}>Order ready for delivery</p>
+                      <p style={{ fontSize: 11, color: '#3B82F6' }}>Click to assign this delivery to yourself</p>
+                    </div>
+                    <button
+                      onClick={() => selfAssign(order.id)}
+                      disabled={assigningOrder === order.id}
+                      style={{ height: 34, padding: '0 14px', borderRadius: 8, border: 'none', background: '#2563EB', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0, opacity: assigningOrder === order.id ? 0.6 : 1 }}
+                    >
+                      {assigningOrder === order.id ? 'Assigning...' : 'Take Delivery'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* My assignment indicator for non-owner */}
+              {!isOwner && order.assigned_staff_id === currentUserId && order.status === 'ready' && (
+                <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 10, border: '1px solid #BBF7D0', background: '#F0FDF4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="#16A34A" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: '#16A34A' }}>You are assigned for this delivery</p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      setAssigningOrder(order.id)
+                      try {
+                        await api.post(`/delivery/orders/${order.id}/picked-up`)
+                        setAssignedToast('Order marked as out for delivery')
+                        setTimeout(() => setAssignedToast(null), 3000)
+                        await fetchOrders()
+                      } catch (e: any) {
+                        setAssignedToast(e.response?.data?.detail || 'Failed')
+                        setTimeout(() => setAssignedToast(null), 3000)
+                      } finally { setAssigningOrder(null) }
+                    }}
+                    disabled={assigningOrder === order.id}
+                    style={{ height: 32, padding: '0 12px', borderRadius: 8, border: 'none', background: '#C8964B', color: '#fff', fontSize: 11, fontWeight: 600, cursor: 'pointer', flexShrink: 0 }}
+                  >
+                    {assigningOrder === order.id ? '...' : 'Mark Picked Up'}
+                  </button>
+                </div>
+              )}
+
               {/* ── Assign Staff Section (owner + active orders) ── */}
-              {isOwner && ['confirmed', 'preparing', 'ready'].includes(order.status) && (
-                <div style={{ marginBottom: 12, padding: '12px 12px', borderRadius: 10, border: '1px dashed #E8C987', background: '#FFFDF5' }}>
+              {isOwner && ['confirmed', 'preparing', 'ready'].includes(order.status) && (                <div style={{ marginBottom: 12, padding: '12px 12px', borderRadius: 10, border: '1px dashed #E8C987', background: '#FFFDF5' }}>
                   {deliveryStaff.length > 0 ? (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>

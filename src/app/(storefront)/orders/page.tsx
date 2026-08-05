@@ -7,11 +7,22 @@ import { useWebSocket } from '@/hooks/useWebSocket'
 /**
  * Orders Page — Shows customer's order history with real-time WebSocket updates.
  * Fetches from GET /orders/my-orders
- * WebSocket: ws://host/ws/customer/{user_id} for live status changes
+ * WebSocket: ws://host/ws/customer/{user_id} for live status changes + staff assignment
  */
 
 interface OrderItem { item_name: string; item_price: number; quantity: number; line_total: number; menu_item_id?: number }
-interface Order { id: number; order_number: string; status: string; total_amount: number; items: OrderItem[]; created_at: string; estimated_delivery_time: number | null; payment_status?: string }
+interface Order {
+  id: number
+  order_number: string
+  status: string
+  total_amount: number
+  items: OrderItem[]
+  created_at: string
+  estimated_delivery_time: number | null
+  payment_status?: string
+  assigned_staff_name?: string | null
+  assigned_staff_phone?: string | null
+}
 
 const statusColors: Record<string, { bg: string; text: string }> = {
   pending: { bg: '#FFF7ED', text: '#D97706' },
@@ -21,6 +32,43 @@ const statusColors: Record<string, { bg: string; text: string }> = {
   delivered: { bg: '#F0FDF4', text: '#16A34A' },
   cancelled: { bg: '#FEF2F2', text: '#DC2626' },
   rejected: { bg: '#FEF2F2', text: '#DC2626' },
+}
+
+// Delivery partner card shown when a staff is assigned
+function DeliveryPartnerCard({ name, phone, isMobile = false }: { name: string; phone?: string | null; isMobile?: boolean }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 10,
+      padding: isMobile ? '8px 10px' : '10px 14px',
+      borderRadius: isMobile ? 8 : 10,
+      background: 'linear-gradient(135deg, #EFF6FF 0%, #F0FDF4 100%)',
+      border: '1px solid #BFDBFE',
+      marginBottom: isMobile ? 8 : 12,
+    }}>
+      <div style={{
+        width: isMobile ? 28 : 32, height: isMobile ? 28 : 32, borderRadius: '50%',
+        background: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+      }}>
+        <svg width={isMobile ? 13 : 15} height={isMobile ? 13 : 15} fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+        </svg>
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: isMobile ? 9 : 10, fontWeight: 600, color: '#1D4ED8', marginBottom: 1, letterSpacing: 0.3 }}>DELIVERY PARTNER</p>
+        <p style={{ fontSize: isMobile ? 12 : 13, fontWeight: 600, color: '#1E3A8A' }}>{name}</p>
+      </div>
+      {phone && (
+        <p style={{
+          fontSize: isMobile ? 12 : 13, color: '#1D4ED8', fontWeight: 600,
+          flexShrink: 0, background: '#fff',
+          padding: isMobile ? '4px 8px' : '5px 10px',
+          borderRadius: 6, border: '1px solid #BFDBFE',
+        }}>
+          {phone}
+        </p>
+      )}
+    </div>
+  )
 }
 
 export default function OrdersPage() {
@@ -73,15 +121,24 @@ export default function OrdersPage() {
     fetchOrders()
   }, [])
 
-  // WebSocket for real-time order status updates
+  // WebSocket for real-time order status updates + staff assignment
   const wsUrl = userId
     ? `${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/api\/v1$/, '').replace(/^http/, 'ws')}/ws/customer/${userId}`
     : null
 
   const handleWsMessage = useCallback((msg: { event: string; data: any }) => {
     if (msg.event === 'order_status_updated') {
-      const { order_id, status } = msg.data
-      setOrders(prev => prev.map(o => o.id === order_id ? { ...o, status } : o))
+      const { order_id, status, assigned_staff_name, assigned_staff_phone } = msg.data
+      setOrders(prev => prev.map(o => {
+        if (o.id !== order_id) return o
+        return {
+          ...o,
+          status: status || o.status,
+          // Only update staff info if provided in the WS payload
+          ...(assigned_staff_name !== undefined ? { assigned_staff_name } : {}),
+          ...(assigned_staff_phone !== undefined ? { assigned_staff_phone } : {}),
+        }
+      }))
     }
   }, [])
 
@@ -121,6 +178,7 @@ export default function OrdersPage() {
             <div className="flex flex-col" style={{ gap: '16px' }}>
               {orders.map((order) => {
                 const sc = statusColors[order.status] || statusColors.pending
+                const showStaff = order.assigned_staff_name && ['ready', 'delivered'].includes(order.status)
                 return (
                   <div key={order.id} className="bg-white" style={{ padding: '24px', borderRadius: '16px', border: '1px solid #EEEAE5' }}>
                     <div className="flex items-center justify-between" style={{ marginBottom: '16px' }}>
@@ -133,6 +191,7 @@ export default function OrdersPage() {
                         <span className="font-bold text-[#1A1A1A]" style={{ fontSize: '18px' }}>&#8377;{order.total_amount}</span>
                       </div>
                     </div>
+
                     {/* Items list */}
                     <div style={{ marginBottom: '12px' }}>
                       {order.items.map((item, idx) => (
@@ -142,6 +201,15 @@ export default function OrdersPage() {
                         </div>
                       ))}
                     </div>
+
+                    {/* Delivery Partner — shown when staff is assigned */}
+                    {showStaff && (
+                      <DeliveryPartnerCard
+                        name={order.assigned_staff_name!}
+                        phone={order.assigned_staff_phone}
+                      />
+                    )}
+
                     {/* Premium Status Timeline */}
                     {!['cancelled', 'rejected'].includes(order.status) && (() => {
                       const steps = [
@@ -234,6 +302,7 @@ export default function OrdersPage() {
                 const steps = ['pending', 'confirmed', 'preparing', 'ready', 'delivered']
                 const currentIdx = steps.indexOf(order.status)
                 const isActive = !['cancelled', 'rejected'].includes(order.status)
+                const showStaff = order.assigned_staff_name && ['ready', 'delivered'].includes(order.status)
                 return (
                   <div key={order.id} className="bg-white" style={{ padding: '14px', borderRadius: '12px', border: '1px solid #EEEAE5' }}>
                     {/* Header */}
@@ -243,6 +312,16 @@ export default function OrdersPage() {
                     </div>
                     {/* Items */}
                     <p style={{ fontSize: 11, color: '#888', marginBottom: 8, lineHeight: '16px' }}>{order.items.map(i => `${i.item_name} x${i.quantity}`).join(', ')}</p>
+
+                    {/* Delivery Partner */}
+                    {showStaff && (
+                      <DeliveryPartnerCard
+                        name={order.assigned_staff_name!}
+                        phone={order.assigned_staff_phone}
+                        isMobile
+                      />
+                    )}
+
                     {/* Timeline — compact for mobile */}
                     {isActive && (
                       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10, gap: 2 }}>

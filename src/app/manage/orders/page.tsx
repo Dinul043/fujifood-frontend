@@ -15,11 +15,22 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   rejected: { bg: '#FEF2F2', color: '#DC2626' },
 }
 
+interface DeliveryStaff {
+  id: number
+  name: string
+  phone: string
+}
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState('all')
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState<number | null>(null)
+  const [deliveryStaff, setDeliveryStaff] = useState<DeliveryStaff[]>([])
+  const [isOwner, setIsOwner] = useState(false)
+  // Per-order assignment state
+  const [assigningOrder, setAssigningOrder] = useState<number | null>(null)
+  const [assignedToast, setAssignedToast] = useState<string | null>(null)
 
   const fetchOrders = async () => {
     try {
@@ -32,9 +43,24 @@ export default function OrdersPage() {
     }
   }
 
-  useEffect(() => { fetchOrders() }, [])
+  useEffect(() => {
+    fetchOrders()
+    // Check if owner and load delivery staff
+    ;(async () => {
+      try {
+        const { data: me } = await api.get('/auth/me')
+        if (me.is_owner) {
+          setIsOwner(true)
+          try {
+            const { data: staff } = await api.get('/delivery/staff-list')
+            setDeliveryStaff(staff || [])
+          } catch {}
+        }
+      } catch {}
+    })()
+  }, [])
 
-  // Auto-refresh orders every 5 seconds (WebSocket notification is handled by layout)
+  // Auto-refresh orders every 5 seconds
   useEffect(() => {
     const interval = setInterval(fetchOrders, 5000)
     return () => clearInterval(interval)
@@ -51,6 +77,21 @@ export default function OrdersPage() {
       await fetchOrders()
     } catch {} finally {
       setUpdating(null)
+    }
+  }
+
+  const assignStaff = async (orderId: number, staffId: number, staffName: string) => {
+    setAssigningOrder(orderId)
+    try {
+      await api.post(`/delivery/assign/${orderId}`, { staff_id: staffId })
+      setAssignedToast(`${staffName} assigned successfully`)
+      setTimeout(() => setAssignedToast(null), 3000)
+      await fetchOrders()
+    } catch (e: any) {
+      setAssignedToast(e.response?.data?.detail || 'Failed to assign staff')
+      setTimeout(() => setAssignedToast(null), 3000)
+    } finally {
+      setAssigningOrder(null)
     }
   }
 
@@ -80,6 +121,20 @@ export default function OrdersPage() {
 
   return (
     <div>
+      {/* Toast notification */}
+      {assignedToast && (
+        <div style={{
+          position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 200, background: '#1A1A1A', color: '#fff', borderRadius: 12,
+          padding: '12px 24px', fontSize: 13, fontWeight: 600,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.2)', whiteSpace: 'nowrap',
+          animation: 'toastIn 0.25s ease',
+        }}>
+          {assignedToast}
+        </div>
+      )}
+      <style>{`@keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(-8px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }`}</style>
+
       <div style={{ marginBottom: 8 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1A1A1A', marginBottom: 8 }}>Orders</h1>
         <p style={{ fontSize: 14, color: '#888', marginBottom: 32 }}>Manage incoming and active orders.</p>
@@ -117,7 +172,7 @@ export default function OrdersPage() {
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 60, color: '#AAA', fontSize: 14 }}>No orders found.</div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: 16 }}>
           {filtered.map(order => (
             <div
               key={order.id}
@@ -184,6 +239,83 @@ export default function OrdersPage() {
                   </p>
                   {order.delivery_address.phone && (
                     <a href={`tel:${order.delivery_address.phone}`} style={{ fontSize: 11, color: '#C8964B', fontWeight: 500, textDecoration: 'none' }}>{order.delivery_address.phone}</a>
+                  )}
+                </div>
+              )}
+
+              {/* ── Assigned staff badge ── */}
+              {order.assigned_staff_name && (
+                <div style={{ marginBottom: 12, padding: '8px 10px', borderRadius: 8, background: '#F0FDF4', border: '1px solid #BBF7D0', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="#16A34A" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+                  </svg>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 10, color: '#16A34A', fontWeight: 600 }}>ASSIGNED STAFF</p>
+                    <p style={{ fontSize: 12, color: '#166534', fontWeight: 500 }}>{order.assigned_staff_name}</p>
+                  </div>
+                  {order.assigned_staff_phone && (
+                    <a href={`tel:${order.assigned_staff_phone}`} style={{ fontSize: 11, color: '#16A34A', fontWeight: 600, textDecoration: 'none' }}>
+                      {order.assigned_staff_phone}
+                    </a>
+                  )}
+                </div>
+              )}
+
+              {/* ── Assign Staff Section (owner + active orders) ── */}
+              {isOwner && ['confirmed', 'preparing', 'ready'].includes(order.status) && (
+                <div style={{ marginBottom: 12, padding: '12px 12px', borderRadius: 10, border: '1px dashed #E8C987', background: '#FFFDF5' }}>
+                  {deliveryStaff.length > 0 ? (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                        <svg width={13} height={13} fill="none" viewBox="0 0 24 24" stroke="#C8964B" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" /></svg>
+                        <p style={{ fontSize: 11, color: '#B8860B', fontWeight: 700, letterSpacing: 0.3 }}>ASSIGN DELIVERY STAFF</p>
+                      </div>
+                      <p style={{ fontSize: 11, color: '#888', marginBottom: 8 }}>
+                        {order.assigned_staff_name
+                          ? `Currently: ${order.assigned_staff_name} — change below`
+                          : order.status === 'ready'
+                            ? 'Order is ready — assign a delivery staff now.'
+                            : 'Pre-assign delivery staff. They will be notified when ready.'}
+                      </p>
+                      <select
+                        id={`assign-staff-${order.id}`}
+                        defaultValue=""
+                        disabled={assigningOrder === order.id}
+                        onChange={e => {
+                          const val = e.target.value
+                          if (!val) return
+                          const staff = deliveryStaff.find(s => s.id === parseInt(val))
+                          if (staff) assignStaff(order.id, staff.id, staff.name)
+                          e.target.value = ''
+                        }}
+                        style={{
+                          width: '100%', height: 40, borderRadius: 8,
+                          border: '1.5px solid #C8964B',
+                          padding: '0 36px 0 12px', fontSize: 13, fontWeight: 500,
+                          background: '#FAFAF8', color: '#1A1A1A',
+                          cursor: assigningOrder === order.id ? 'not-allowed' : 'pointer',
+                          outline: 'none', appearance: 'none',
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23C8964B' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E")`,
+                          backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center',
+                        }}
+                      >
+                        <option value="">
+                          {assigningOrder === order.id ? 'Assigning...' : (order.assigned_staff_name ? '↕ Change staff...' : '↓ Choose delivery staff')}
+                        </option>
+                        {deliveryStaff.map(s => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}{s.phone ? ` · ${s.phone}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <p style={{ fontSize: 11, color: '#92400E' }}>
+                        <span style={{ fontWeight: 600 }}>No delivery staff yet.</span> Add one to assign deliveries.
+                      </p>
+                      <a href="/manage/account" style={{ fontSize: 11, color: '#fff', background: '#C8964B', fontWeight: 700, padding: '5px 10px', borderRadius: 6, textDecoration: 'none', flexShrink: 0, whiteSpace: 'nowrap' }}>+ Add Staff →</a>
+                    </div>
                   )}
                 </div>
               )}

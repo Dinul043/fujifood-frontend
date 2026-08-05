@@ -9,6 +9,7 @@ const nav = [
   { label: 'Dashboard', href: '/manage', d: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6', ownerOnly: false },
   { label: 'Orders', href: '/manage/orders', d: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', ownerOnly: false },
   { label: 'Menu', href: '/manage/menu', d: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253', ownerOnly: false },
+  { label: 'Delivery', href: '/manage/delivery', d: 'M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12', ownerOnly: true },
   { label: 'Business', href: '/manage/business', d: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4', ownerOnly: true },
   { label: 'Reviews', href: '/manage/customers', d: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', ownerOnly: true },
   { label: 'Reports', href: '/manage/reports', d: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z', ownerOnly: true },
@@ -26,32 +27,68 @@ export default function ManageLayout({ children }: { children: React.ReactNode }
   const [pendingCount, setPendingCount] = useState(0)
   const [globalToast, setGlobalToast] = useState<{ message: string; orderNumber: string } | null>(null)
   const [isOwner, setIsOwner] = useState(false)
+  const [userRole, setUserRole] = useState<string>('')
 
-  useEffect(() => { (async () => { try { const { data } = await api.get('/auth/me'); if (data.role === 'restaurant_admin') { setOk(true); setNm(data.name?.[0] || 'R'); setTenantId(data.tenant_id); setIsOwner(data.is_owner || false) } else window.location.href = '/' } catch { window.location.href = '/login' } finally { setLoad(false) } })() }, [])
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const { data } = await api.get('/auth/me')
+        const role = data.role as string
+
+        if (role === 'restaurant_admin') {
+          // Full admin access
+          setOk(true)
+          setNm(data.name?.[0] || 'R')
+          setTenantId(data.tenant_id)
+          setIsOwner(data.is_owner || false)
+          setUserRole(role)
+        } else if (role === 'delivery_staff') {
+          // Delivery staff: only allow /manage/delivery
+          setOk(true)
+          setNm(data.name?.[0] || 'D')
+          setTenantId(data.tenant_id)
+          setIsOwner(false)
+          setUserRole(role)
+          // Redirect to delivery page if on any other manage route
+          if (!path.startsWith('/manage/delivery')) {
+            window.location.href = '/manage/delivery'
+            return
+          }
+        } else {
+          window.location.href = '/'
+        }
+      } catch {
+        window.location.href = '/login'
+      } finally {
+        setLoad(false)
+      }
+    })()
+  }, [path])
+
   useEffect(() => { if (drawer) setDrawer(false) }, [path])
 
-  // Route protection: redirect non-owners from owner-only pages
+  // Route protection: redirect non-owners from owner-only pages (restaurant_admin only)
   useEffect(() => {
-    if (!ok || load) return
-    const ownerRoutes = ['/manage/business', '/manage/customers', '/manage/reports', '/manage/history']
+    if (!ok || load || userRole !== 'restaurant_admin') return
+    const ownerRoutes = ['/manage/business', '/manage/customers', '/manage/reports', '/manage/history', '/manage/delivery']
     if (!isOwner && ownerRoutes.some(r => path.startsWith(r))) {
       window.location.href = '/manage'
     }
-  }, [path, isOwner, ok, load])
+  }, [path, isOwner, ok, load, userRole])
 
-  // Fetch pending order count for badge
+  // Fetch pending order count for badge (admin only)
   useEffect(() => {
-    if (!ok) return
+    if (!ok || userRole !== 'restaurant_admin') return
     ;(async () => {
       try {
         const { data } = await api.get('/orders/manage?page_size=100&status=pending')
         setPendingCount(data.total || 0)
       } catch {}
     })()
-  }, [ok])
+  }, [ok, userRole])
 
   // Global WebSocket — works on ALL admin pages
-  const wsUrl = tenantId
+  const wsUrl = tenantId && userRole === 'restaurant_admin'
     ? `${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/api\/v1$/, '').replace(/^http/, 'ws')}/ws/admin/${tenantId}`
     : null
 
@@ -70,6 +107,11 @@ export default function ManageLayout({ children }: { children: React.ReactNode }
 
   if (load) return <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FAFAF8' }}><p style={{ color: '#aaa', fontSize: 14 }}>Loading...</p></div>
   if (!ok) return null
+
+  // Delivery staff get their own page layout (no sidebar, no nav)
+  if (userRole === 'delivery_staff') {
+    return <>{children}</>
+  }
 
   const NavItems = () => (<>
     {nav.filter(n => !n.ownerOnly || isOwner).map(n => {
@@ -116,10 +158,10 @@ export default function ManageLayout({ children }: { children: React.ReactNode }
             </a>
           </div>
         </div>
-        {/* Content */}
-        <div style={{ flex: 1, padding: '32px 40px', maxWidth: 1200 }}>
-          {children}
-        </div>
+          {/* Content */}
+          <div style={{ flex: 1, padding: '32px 40px', maxWidth: 1200 }}>
+            {children}
+          </div>
         </div>
       </div>
 

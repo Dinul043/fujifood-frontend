@@ -284,6 +284,16 @@ export default function OrdersPage() {
                         <p style={{ fontSize: 11, color: '#AAA', marginTop: 4 }}>We&apos;re sorry for the inconvenience. Please try ordering again.</p>
                       </div>
                     )}
+                    {order.status === 'cancelled' && order.rejection_reason && (
+                      <div style={{ marginTop: 8, padding: '10px 14px', borderRadius: 10, background: '#FFF7ED', border: '1px solid #FED7AA' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                          <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="#D97706" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#D97706', letterSpacing: 0.3 }}>CANCELLED BY RESTAURANT</span>
+                        </div>
+                        <p style={{ fontSize: 13, color: '#92400E', fontWeight: 500 }}>{order.rejection_reason}</p>
+                        <p style={{ fontSize: 11, color: '#AAA', marginTop: 4 }}>We&apos;re sorry for the inconvenience. Please try ordering again.</p>
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -369,11 +379,25 @@ export default function OrdersPage() {
                     {(order.status === 'pending' || order.status === 'confirmed') && (
                       <button onClick={() => { setCancelModal({ id: order.id, orderNumber: order.order_number, items: order.items.map(i => i.item_name).join(', ') }); setCancelError('') }} style={{ marginTop: 8, width: '100%', height: 30, fontSize: 11, color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 6, cursor: 'pointer', fontWeight: 500 }}>Cancel Order</button>
                     )}
-                    {/* Rejection reason */}
+                    {/* Rejection / cancellation reason */}
                     {order.status === 'rejected' && order.rejection_reason && (
                       <div style={{ marginTop: 8, padding: '10px 12px', borderRadius: 8, background: '#FEF2F2', border: '1px solid #FECACA' }}>
-                        <p style={{ fontSize: 10, fontWeight: 700, color: '#DC2626', marginBottom: 3 }}>ORDER REJECTED</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
+                          <svg width={11} height={11} fill="none" viewBox="0 0 24 24" stroke="#DC2626" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+                          <p style={{ fontSize: 10, fontWeight: 700, color: '#DC2626' }}>ORDER REJECTED</p>
+                        </div>
                         <p style={{ fontSize: 12, color: '#991B1B', fontWeight: 500 }}>{order.rejection_reason}</p>
+                        <p style={{ fontSize: 10, color: '#AAA', marginTop: 3 }}>Please try ordering again.</p>
+                      </div>
+                    )}
+                    {order.status === 'cancelled' && order.rejection_reason && (
+                      <div style={{ marginTop: 8, padding: '10px 12px', borderRadius: 8, background: '#FFF7ED', border: '1px solid #FED7AA' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 }}>
+                          <svg width={11} height={11} fill="none" viewBox="0 0 24 24" stroke="#D97706" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+                          <p style={{ fontSize: 10, fontWeight: 700, color: '#D97706' }}>CANCELLED BY RESTAURANT</p>
+                        </div>
+                        <p style={{ fontSize: 12, color: '#92400E', fontWeight: 500 }}>{order.rejection_reason}</p>
+                        <p style={{ fontSize: 10, color: '#AAA', marginTop: 3 }}>Please try ordering again.</p>
                       </div>
                     )}
                   </div>

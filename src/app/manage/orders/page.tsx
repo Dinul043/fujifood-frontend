@@ -34,6 +34,32 @@ export default function OrdersPage() {
   const [rejectModal, setRejectModal] = useState<{ orderId: number; orderNumber: string } | null>(null)
   const [selectedReason, setSelectedReason] = useState('')
   const [rejecting, setRejecting] = useState(false)
+  const [cancelReasonModal, setCancelReasonModal] = useState<{ orderId: number; orderNumber: string } | null>(null)
+  const [cancelReason, setCancelReason] = useState('')
+  const [cancellingWithReason, setCancellingWithReason] = useState(false)
+
+  const CANCEL_REASONS = [
+    { id: 'item_unavailable', label: 'Item no longer available', desc: 'Stock ran out after accepting' },
+    { id: 'kitchen_issue', label: 'Kitchen issue', desc: 'Unable to prepare this order' },
+    { id: 'too_many_orders', label: 'Too many orders', desc: 'Overloaded — cannot process this order' },
+    { id: 'customer_request', label: 'Customer requested cancel', desc: 'Customer contacted us to cancel' },
+    { id: 'other', label: 'Other reason', desc: 'Contact customer for details' },
+  ]
+
+  const handleCancelWithReason = async () => {
+    if (!cancelReasonModal || !cancelReason) return
+    setCancellingWithReason(true)
+    try {
+      const reason = CANCEL_REASONS.find(r => r.id === cancelReason)?.label || cancelReason
+      await api.patch(`/orders/manage/${cancelReasonModal.orderId}/status`, { status: 'cancelled', rejection_reason: reason })
+      setCancelReasonModal(null)
+      setCancelReason('')
+      await fetchOrders()
+    } catch (e: any) {
+      setAssignedToast(e.response?.data?.detail || 'Failed to cancel order')
+      setTimeout(() => setAssignedToast(null), 3000)
+    } finally { setCancellingWithReason(false) }
+  }
 
   const REJECT_REASONS = [
     { id: 'item_unavailable', label: 'Item not available', desc: 'One or more items are out of stock' },
@@ -152,12 +178,12 @@ export default function OrdersPage() {
       case 'confirmed':
         return [
           { label: 'Start Preparing', status: 'preparing', bg: '#C8964B', color: '#fff' },
-          { label: 'Cancel', status: 'cancelled', bg: '#FEF2F2', color: '#DC2626' },
+          { label: 'Cancel', status: 'cancel_modal', bg: '#FEF2F2', color: '#DC2626' },
         ]
       case 'preparing':
         return [
           { label: 'Mark Ready', status: 'ready', bg: '#2563EB', color: '#fff' },
-          { label: 'Cancel', status: 'cancelled', bg: '#FEF2F2', color: '#DC2626' },
+          { label: 'Cancel', status: 'cancel_modal', bg: '#FEF2F2', color: '#DC2626' },
         ]
       case 'ready':
         return [{ label: 'Mark Delivered', status: 'delivered', bg: '#16A34A', color: '#fff' }]
@@ -242,6 +268,73 @@ export default function OrdersPage() {
                 style={{ flex: 1, height: 44, borderRadius: 12, border: 'none', background: !selectedReason ? '#FEE2E2' : '#DC2626', color: !selectedReason ? '#FECACA' : '#fff', fontSize: 13, fontWeight: 600, cursor: !selectedReason ? 'default' : 'pointer', transition: 'all 0.2s' }}
               >
                 {rejecting ? 'Rejecting...' : 'Reject Order'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Cancel Order with Reason Modal ── */}
+      {cancelReasonModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', padding: '20px' }}>
+          <div style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 420, boxShadow: '0 32px 80px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+            {/* Header */}
+            <div style={{ padding: '24px 28px 20px', borderBottom: '1px solid #F0F0F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#FFF7ED', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width={18} height={18} fill="none" viewBox="0 0 24 24" stroke="#D97706" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A', marginBottom: 2 }}>Cancel Order #{cancelReasonModal.orderNumber}</h3>
+                  <p style={{ fontSize: 12, color: '#888' }}>Select a reason — this will be shared with the customer</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Reason options */}
+            <div style={{ padding: '16px 28px', display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '50vh', overflowY: 'auto' }}>
+              {CANCEL_REASONS.map(r => (
+                <button
+                  key={r.id}
+                  onClick={() => setCancelReason(r.id)}
+                  style={{
+                    padding: '12px 16px',
+                    borderRadius: 12,
+                    border: cancelReason === r.id ? '2px solid #D97706' : '1.5px solid #E8E4DE',
+                    background: cancelReason === r.id ? '#FFF7ED' : '#FAFAF8',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.15s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                  }}
+                >
+                  <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${cancelReason === r.id ? '#D97706' : '#DDD'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {cancelReason === r.id && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#D97706' }} />}
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: cancelReason === r.id ? '#D97706' : '#1A1A1A', marginBottom: 2 }}>{r.label}</p>
+                    <p style={{ fontSize: 11, color: '#888' }}>{r.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '16px 28px 24px', borderTop: '1px solid #F0F0F0', display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => { setCancelReasonModal(null); setCancelReason('') }}
+                style={{ flex: 1, height: 44, borderRadius: 12, border: '1.5px solid #E8E4DE', background: '#fff', color: '#666', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Keep Order
+              </button>
+              <button
+                onClick={handleCancelWithReason}
+                disabled={!cancelReason || cancellingWithReason}
+                style={{ flex: 1, height: 44, borderRadius: 12, border: 'none', background: !cancelReason ? '#FED7AA' : '#D97706', color: !cancelReason ? '#FFF7ED' : '#fff', fontSize: 13, fontWeight: 600, cursor: !cancelReason ? 'default' : 'pointer', transition: 'all 0.2s' }}
+              >
+                {cancellingWithReason ? 'Cancelling...' : 'Cancel Order'}
               </button>
             </div>
           </div>
@@ -491,6 +584,9 @@ export default function OrdersPage() {
                         if (action.status === 'reject_modal') {
                           setRejectModal({ orderId: order.id, orderNumber: order.order_number })
                           setSelectedReason('')
+                        } else if (action.status === 'cancel_modal') {
+                          setCancelReasonModal({ orderId: order.id, orderNumber: order.order_number })
+                          setCancelReason('')
                         } else {
                           updateStatus(order.id, action.status)
                         }

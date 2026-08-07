@@ -30,6 +30,34 @@ export default function OrdersPage() {
   const [isOwner, setIsOwner] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<number | null>(null)
   const [currentUserRole, setCurrentUserRole] = useState<string>('')
+  // Reject with reason modal
+  const [rejectModal, setRejectModal] = useState<{ orderId: number; orderNumber: string } | null>(null)
+  const [selectedReason, setSelectedReason] = useState('')
+  const [rejecting, setRejecting] = useState(false)
+
+  const REJECT_REASONS = [
+    { id: 'item_unavailable', label: 'Item not available', desc: 'One or more items are out of stock' },
+    { id: 'kitchen_busy', label: 'Kitchen too busy', desc: 'We cannot take new orders right now' },
+    { id: 'weather', label: 'Bad weather conditions', desc: 'Delivery not possible due to weather' },
+    { id: 'location_far', label: 'Location out of range', desc: 'Delivery address is outside our zone' },
+    { id: 'closing_soon', label: 'Closing soon', desc: 'Restaurant is about to close' },
+    { id: 'other', label: 'Other reason', desc: 'Contact us for more details' },
+  ]
+
+  const handleReject = async () => {
+    if (!rejectModal || !selectedReason) return
+    setRejecting(true)
+    try {
+      const reason = REJECT_REASONS.find(r => r.id === selectedReason)?.label || selectedReason
+      await api.patch(`/orders/manage/${rejectModal.orderId}/status`, { status: 'rejected', rejection_reason: reason })
+      setRejectModal(null)
+      setSelectedReason('')
+      await fetchOrders()
+    } catch (e: any) {
+      setAssignedToast(e.response?.data?.detail || 'Failed to reject order')
+      setTimeout(() => setAssignedToast(null), 3000)
+    } finally { setRejecting(false) }
+  }
   // Per-order assignment state
   const [assigningOrder, setAssigningOrder] = useState<number | null>(null)
   const [assignedToast, setAssignedToast] = useState<string | null>(null)
@@ -119,7 +147,7 @@ export default function OrdersPage() {
       case 'pending':
         return [
           { label: 'Accept', status: 'confirmed', bg: '#16A34A', color: '#fff' },
-          { label: 'Reject', status: 'rejected', bg: '#FEF2F2', color: '#DC2626' },
+          { label: 'Reject', status: 'reject_modal', bg: '#FEF2F2', color: '#DC2626' },
         ]
       case 'confirmed':
         return [
@@ -152,6 +180,74 @@ export default function OrdersPage() {
           {assignedToast}
         </div>
       )}
+
+      {/* ── Premium Reject Order Modal ── */}
+      {rejectModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', padding: '20px' }}>
+          <div style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 420, boxShadow: '0 32px 80px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+            {/* Header */}
+            <div style={{ padding: '24px 28px 20px', borderBottom: '1px solid #F0F0F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width={18} height={18} fill="none" viewBox="0 0 24 24" stroke="#DC2626" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A', marginBottom: 2 }}>Reject Order #{rejectModal.orderNumber}</h3>
+                  <p style={{ fontSize: 12, color: '#888' }}>Select a reason — this will be shown to the customer</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Reason options */}
+            <div style={{ padding: '16px 28px', display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '50vh', overflowY: 'auto' }}>
+              {REJECT_REASONS.map(r => (
+                <button
+                  key={r.id}
+                  onClick={() => setSelectedReason(r.id)}
+                  style={{
+                    padding: '12px 16px',
+                    borderRadius: 12,
+                    border: selectedReason === r.id ? '2px solid #DC2626' : '1.5px solid #E8E4DE',
+                    background: selectedReason === r.id ? '#FEF2F2' : '#FAFAF8',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.15s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                  }}
+                >
+                  <div style={{ width: 18, height: 18, borderRadius: '50%', border: `2px solid ${selectedReason === r.id ? '#DC2626' : '#DDD'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {selectedReason === r.id && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#DC2626' }} />}
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: selectedReason === r.id ? '#DC2626' : '#1A1A1A', marginBottom: 2 }}>{r.label}</p>
+                    <p style={{ fontSize: 11, color: '#888' }}>{r.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '16px 28px 24px', borderTop: '1px solid #F0F0F0', display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => { setRejectModal(null); setSelectedReason('') }}
+                style={{ flex: 1, height: 44, borderRadius: 12, border: '1.5px solid #E8E4DE', background: '#fff', color: '#666', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReject}
+                disabled={!selectedReason || rejecting}
+                style={{ flex: 1, height: 44, borderRadius: 12, border: 'none', background: !selectedReason ? '#FEE2E2' : '#DC2626', color: !selectedReason ? '#FECACA' : '#fff', fontSize: 13, fontWeight: 600, cursor: !selectedReason ? 'default' : 'pointer', transition: 'all 0.2s' }}
+              >
+                {rejecting ? 'Rejecting...' : 'Reject Order'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`@keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(-8px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }`}</style>
 
       <div style={{ marginBottom: 8 }}>
@@ -391,7 +487,14 @@ export default function OrdersPage() {
                   {getActions(order).map(action => (
                     <button
                       key={action.status}
-                      onClick={() => updateStatus(order.id, action.status)}
+                      onClick={() => {
+                        if (action.status === 'reject_modal') {
+                          setRejectModal({ orderId: order.id, orderNumber: order.order_number })
+                          setSelectedReason('')
+                        } else {
+                          updateStatus(order.id, action.status)
+                        }
+                      }}
                       disabled={updating === order.id}
                       style={{
                         flex: 1,

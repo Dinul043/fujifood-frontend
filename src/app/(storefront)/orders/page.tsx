@@ -22,6 +22,7 @@ interface Order {
   payment_status?: string
   assigned_staff_name?: string | null
   assigned_staff_phone?: string | null
+  rejection_reason?: string | null
 }
 
 const statusColors: Record<string, { bg: string; text: string }> = {
@@ -128,15 +129,15 @@ export default function OrdersPage() {
 
   const handleWsMessage = useCallback((msg: { event: string; data: any }) => {
     if (msg.event === 'order_status_updated') {
-      const { order_id, status, assigned_staff_name, assigned_staff_phone } = msg.data
+      const { order_id, status, assigned_staff_name, assigned_staff_phone, rejection_reason } = msg.data
       setOrders(prev => prev.map(o => {
         if (o.id !== order_id) return o
         return {
           ...o,
           status: status || o.status,
-          // Only update staff info if provided in the WS payload
           ...(assigned_staff_name !== undefined ? { assigned_staff_name } : {}),
           ...(assigned_staff_phone !== undefined ? { assigned_staff_phone } : {}),
+          ...(rejection_reason !== undefined ? { rejection_reason } : {}),
         }
       }))
     }
@@ -273,6 +274,16 @@ export default function OrdersPage() {
                         <span style={{ fontSize: '12px', fontWeight: 500, color: '#DC2626' }}>Refund processed</span>
                       </div>
                     )}
+                    {order.status === 'rejected' && order.rejection_reason && (
+                      <div style={{ marginTop: 8, padding: '10px 14px', borderRadius: 10, background: '#FEF2F2', border: '1px solid #FECACA' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                          <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="#DC2626" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#DC2626', letterSpacing: 0.3 }}>ORDER REJECTED</span>
+                        </div>
+                        <p style={{ fontSize: 13, color: '#991B1B', fontWeight: 500 }}>{order.rejection_reason}</p>
+                        <p style={{ fontSize: 11, color: '#AAA', marginTop: 4 }}>We&apos;re sorry for the inconvenience. Please try ordering again.</p>
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -357,6 +368,13 @@ export default function OrdersPage() {
                     {/* Cancel */}
                     {(order.status === 'pending' || order.status === 'confirmed') && (
                       <button onClick={() => { setCancelModal({ id: order.id, orderNumber: order.order_number, items: order.items.map(i => i.item_name).join(', ') }); setCancelError('') }} style={{ marginTop: 8, width: '100%', height: 30, fontSize: 11, color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 6, cursor: 'pointer', fontWeight: 500 }}>Cancel Order</button>
+                    )}
+                    {/* Rejection reason */}
+                    {order.status === 'rejected' && order.rejection_reason && (
+                      <div style={{ marginTop: 8, padding: '10px 12px', borderRadius: 8, background: '#FEF2F2', border: '1px solid #FECACA' }}>
+                        <p style={{ fontSize: 10, fontWeight: 700, color: '#DC2626', marginBottom: 3 }}>ORDER REJECTED</p>
+                        <p style={{ fontSize: 12, color: '#991B1B', fontWeight: 500 }}>{order.rejection_reason}</p>
+                      </div>
                     )}
                   </div>
                 )

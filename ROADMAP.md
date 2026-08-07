@@ -111,18 +111,69 @@ FujiFood is a **software product**, not a data hosting service.
 
 ---
 
-## Sprint 3 — Live Delivery Tracking 🔴 NOT STARTED
+## Sprint 3 — Live Delivery Tracking 🗓️ PLANNED (Monday)
 
-> **After Sprint 2 is stable and demo-proven**
+> Test on same WiFi: open `http://192.168.x.x:3000` on phone, laptop runs the server
 
-- [ ] 3.1 Staff shares GPS location when delivering
-- [ ] 3.2 Customer sees delivery person on map (Leaflet.js, free)
-- [ ] 3.3 ETA displayed live
-- [ ] 3.4 Tracking stops when delivered
+### What to build
+- [ ] 3.1 Staff WebSocket sender — browser GPS → sends coords every 5s when delivering
+- [ ] 3.2 Backend WS event `staff_location_update` — receives from staff, broadcasts to customer
+- [ ] 3.3 Customer map (Leaflet.js, free, no API key) — shows restaurant pin, customer pin, moving staff pin
+- [ ] 3.4 Live ETA on customer orders page — recalculates as staff moves (Haversine distance)
+- [ ] 3.5 "Start Tracking" button on staff's assigned order → activates GPS send loop
+- [ ] 3.6 Tracking auto-stops when order marked Delivered
+- [ ] 3.7 Mobile WiFi testing guide — `NEXT_PUBLIC_API_URL` pointing to laptop LAN IP
+
+### Tech notes
+- Leaflet.js — open source map, no API key, works offline on LAN
+- GPS via `navigator.geolocation.watchPosition()` in staff browser
+- New WS event type: `staff_location_update` `{ order_id, lat, lng }`
+- No DB migration needed — all real-time via WebSocket
+- Android: works directly over HTTP on local IP
+- iPhone: needs `ngrok http 3000` for HTTPS (GPS requires HTTPS on Safari)
 
 ---
 
-## Sprint 4 — Restaurant Management
+## Sprint 3.5 — UI Polish & Responsive Audit 🗓️ PLANNED
+
+> Every page checked at 320px, 375px, 768px, 1024px, 1280px, 1600px+
+> Goal: demo-ready, nothing looks broken or cramped at any size
+
+### Customer Storefront
+- [ ] Homepage — hero, delivery bar, bestsellers, reviews spacing at all breakpoints
+- [ ] Menu page — category tabs scroll, item grid, search input
+- [ ] Cart page — item list, totals, checkout button
+- [ ] Checkout — address form, payment section, order summary
+- [ ] Orders page — timeline, delivery card, reason cards, action buttons
+- [ ] Profile page — address list, form fields
+
+### Admin Panel
+- [ ] Orders page — card grid, action buttons, assign dropdown, modals
+- [ ] Menu management — category tabs, item cards, image upload
+- [ ] Dashboard — stat cards, layout at narrow sidebar widths
+- [ ] Staff management — table/list layout
+- [ ] Business settings — form layout, map
+
+### Standards to enforce
+- 8px grid throughout — no odd spacing values
+- No text overflow or truncation issues on small screens
+- All modals: proper padding + max-height scroll on mobile
+- No horizontal scroll on any page at 320px
+- Touch targets minimum 44px height on mobile
+- Gold `#C8964B` accent consistent, no random colors added
+
+---
+
+## Sprint 6.1 — Promotional Codes 🗓️ PLANNED
+
+> Fully testable on localhost — no external service needed
+
+- [ ] 6.1.1 DB migration — `promo_codes` table (code, type: % or flat, value, min_order, max_uses, used_count, expiry, active)
+- [ ] 6.1.2 Backend routes — `POST /promo/validate`, `GET /promo/` (admin), `POST /promo/` (admin create), `PATCH /promo/{id}` (admin toggle)
+- [ ] 6.1.3 Order model — add `promo_code` + `discount_amount` fields (migration)
+- [ ] 6.1.4 Admin UI — Promo Codes page (create, list, enable/disable, usage count)
+- [ ] 6.1.5 Checkout — promo input field + Apply button + discount line in summary
+- [ ] 6.1.6 Order confirmation + history shows promo applied
 
 ### 4.1 Business Hours
 **Status:** 🔴 Not started (table exists, no UI)  

@@ -1,14 +1,23 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import api from '@/lib/api'
 import { useWebSocket } from '@/hooks/useWebSocket'
 
 /**
  * Orders Page — Shows customer's order history with real-time WebSocket updates.
  * Fetches from GET /orders/my-orders
- * WebSocket: ws://host/ws/customer/{user_id} for live status changes + staff assignment
+ * WebSocket: ws://host/ws/customer/{user_id} for live status changes + staff GPS
  */
+
+// Dynamic import — Leaflet requires browser APIs, cannot SSR
+const LiveTrackingMap = dynamic(
+  () => import('@/components/tracking/LiveTrackingMap'),
+  { ssr: false, loading: () => null }
+)
+
+interface StaffLocation { lat: number; lng: number; accuracy?: number; timestamp?: number }
 
 interface OrderItem { item_name: string; item_price: number; quantity: number; line_total: number; menu_item_id?: number }
 interface Order {
@@ -23,6 +32,14 @@ interface Order {
   assigned_staff_name?: string | null
   assigned_staff_phone?: string | null
   rejection_reason?: string | null
+  delivery_address?: {
+    latitude?: number | null
+    longitude?: number | null
+    line1?: string
+    line2?: string
+    city?: string
+    pincode?: string
+  } | null
 }
 
 const statusColors: Record<string, { bg: string; text: string }> = {
@@ -81,6 +98,10 @@ export default function OrdersPage() {
   const [cancelError, setCancelError] = useState('')
   const [cancelling, setCancelling] = useState(false)
   const [orderingAgain, setOrderingAgain] = useState<number | null>(null)
+  // Staff GPS locations: order_id → StaffLocation
+  const [staffLocations, setStaffLocations] = useState<Record<number, StaffLocation>>({})
+  // Restaurant coords (fetched once, used in all maps)
+  const [restaurantCoords, setRestaurantCoords] = useState<{ lat: number; lng: number } | null>(null)
 
   const handleOrderAgain = async (order: Order) => {
     setOrderingAgain(order.id)
@@ -116,6 +137,37 @@ export default function OrdersPage() {
           const { data: reviews } = await api.get('/reviews/my-reviews')
           setReviewedOrders(new Set((reviews || []).map((r: any) => r.order_id)))
         } catch {}
+        // Fetch restaurant coords for map
+        try {
+          const slug = process.env.NEXT_PUBLIC_TENANT_SLUG || 'a2b'
+          const { data: restaurant } = await api.get(`/restaurants/storefront/${slug}`)
+          if (restaurant.latitude && restaurant.longitude) {
+            setRestaurantCoords({ lat: restaurant.latitude, lng: restaurant.longitude })
+          }
+        } catch {}
+        // Try to fetch last-known staff location (staff may not have started tracking yet — 404 is normal)
+        const activeOrders = (data.orders || []).filter(
+          (o: Order) => o.assigned_staff_name && ['ready', 'out_for_delivery'].includes(o.status)
+        )
+        await Promise.allSettled(
+          activeOrders.map(async (o: Order) => {
+            try {
+              // Use native fetch so 404 doesn't log to console (axios logs all 4xx)
+              const base = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1')
+              const token = document.cookie.match(/fujifood_access_token=([^;]+)/)?.[1]
+              const res = await fetch(`${base}/delivery/orders/${o.id}/location`, {
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+              })
+              if (res.ok) {
+                const loc = await res.json()
+                if (loc?.lat && loc?.lng) {
+                  setStaffLocations(prev => ({ ...prev, [o.id]: { lat: loc.lat, lng: loc.lng, accuracy: loc.accuracy, timestamp: loc.timestamp } }))
+                }
+              }
+              // non-ok silently ignored — staff not broadcasting yet
+            } catch {}
+          })
+        )
       } catch {}
       finally { setLoading(false) }
     }
@@ -139,6 +191,15 @@ export default function OrdersPage() {
           ...(assigned_staff_phone !== undefined ? { assigned_staff_phone } : {}),
           ...(rejection_reason !== undefined ? { rejection_reason } : {}),
         }
+      }))
+    }
+    // Live GPS from delivery staff
+    if (msg.event === 'staff_location_update') {
+      const { order_id, lat, lng, accuracy, timestamp } = msg.data
+      console.log('[Orders] staff_location_update received →', { order_id, lat, lng, accuracy })
+      setStaffLocations(prev => ({
+        ...prev,
+        [order_id]: { lat, lng, accuracy, timestamp },
       }))
     }
   }, [])
@@ -208,6 +269,20 @@ export default function OrdersPage() {
                       <DeliveryPartnerCard
                         name={order.assigned_staff_name!}
                         phone={order.assigned_staff_phone}
+                      />
+                    )}
+
+                    {/* ── Live Tracking Map ── */}
+                    {order.assigned_staff_name && ['ready', 'out_for_delivery'].includes(order.status) && (
+                      <LiveTrackingMap
+                        orderId={order.id}
+                        orderNumber={order.order_number}
+                        restaurantLat={restaurantCoords?.lat}
+                        restaurantLng={restaurantCoords?.lng}
+                        customerLat={order.delivery_address?.latitude}
+                        customerLng={order.delivery_address?.longitude}
+                        staffLocation={staffLocations[order.id] ?? null}
+                        isMobile={false}
                       />
                     )}
 
@@ -340,6 +415,20 @@ export default function OrdersPage() {
                         name={order.assigned_staff_name!}
                         phone={order.assigned_staff_phone}
                         isMobile
+                      />
+                    )}
+
+                    {/* ── Live Tracking Map (mobile) ── */}
+                    {order.assigned_staff_name && ['ready', 'out_for_delivery'].includes(order.status) && (
+                      <LiveTrackingMap
+                        orderId={order.id}
+                        orderNumber={order.order_number}
+                        restaurantLat={restaurantCoords?.lat}
+                        restaurantLng={restaurantCoords?.lng}
+                        customerLat={order.delivery_address?.latitude}
+                        customerLng={order.delivery_address?.longitude}
+                        staffLocation={staffLocations[order.id] ?? null}
+                        isMobile={true}
                       />
                     )}
 

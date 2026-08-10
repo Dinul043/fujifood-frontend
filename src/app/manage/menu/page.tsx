@@ -16,15 +16,19 @@ export default function MenuPage() {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
+  // Role: only restaurant_admin can add/edit/delete items
+  const [isAdmin, setIsAdmin] = useState(false)
 
   const fetchData = async () => {
     try {
-      const [itemsRes, catsRes] = await Promise.all([
+      const [itemsRes, catsRes, meRes] = await Promise.all([
         api.get('/menu/manage/items'),
         api.get('/menu/manage/categories'),
+        api.get('/auth/me'),
       ])
       setItems(itemsRes.data.items || itemsRes.data || [])
       setCategories(catsRes.data.categories || catsRes.data || [])
+      setIsAdmin(meRes.data.role === 'restaurant_admin')
     } catch {
       // silently fail
     } finally {
@@ -126,6 +130,7 @@ export default function MenuPage() {
             padding: '0 20px',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
+            display: isAdmin ? 'block' : 'none',
           }}
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1.02)' }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)' }}
@@ -142,14 +147,16 @@ export default function MenuPage() {
             <span key={cat.id} style={{ fontSize: 12, padding: '6px 12px', borderRadius: 8, background: '#F5F3EF', color: '#1A1A1A', fontWeight: 500 }}>{cat.name}</span>
           ))}
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="New category name" style={{ ...inputStyle, flex: 1 }} />
-          <button onClick={async () => { if (!newCatName.trim()) return; setAddingCat(true); try { await api.post('/menu/manage/categories', { name: newCatName }); setNewCatName(''); await fetchData() } catch {} finally { setAddingCat(false) } }} disabled={addingCat} style={{ height: 40, padding: '0 16px', borderRadius: 10, border: 'none', background: '#C8964B', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>{addingCat ? '...' : '+ Add'}</button>
-        </div>
+        {isAdmin && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input value={newCatName} onChange={e => setNewCatName(e.target.value)} placeholder="New category name" style={{ ...inputStyle, flex: 1 }} />
+            <button onClick={async () => { if (!newCatName.trim()) return; setAddingCat(true); try { await api.post('/menu/manage/categories', { name: newCatName }); setNewCatName(''); await fetchData() } catch {} finally { setAddingCat(false) } }} disabled={addingCat} style={{ height: 40, padding: '0 16px', borderRadius: 10, border: 'none', background: '#C8964B', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>{addingCat ? '...' : '+ Add'}</button>
+          </div>
+        )}
       </div>
 
-      {/* Add Item Form */}
-      {showForm && (
+      {/* Add Item Form — admin only */}
+      {showForm && isAdmin && (
         <div style={{ background: '#fff', border: '1px solid #F0F0F0', borderRadius: 16, padding: 24, marginBottom: 24 }}>
           <h3 style={{ fontSize: 16, fontWeight: 600, color: '#1A1A1A', marginBottom: 16 }}>Add New Item</h3>
           <form onSubmit={addItem} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
@@ -261,75 +268,72 @@ export default function MenuPage() {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {/* Availability Toggle */}
-                  <button
-                    onClick={() => toggleAvailability(item)}
-                    style={{
-                      width: 44,
-                      height: 24,
-                      borderRadius: 12,
-                      border: 'none',
-                      background: item.is_available ? '#C8964B' : '#E0E0E0',
-                      cursor: 'pointer',
-                      position: 'relative',
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    <span style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: '50%',
-                      background: '#fff',
-                      position: 'absolute',
-                      top: 3,
-                      left: item.is_available ? 23 : 3,
-                      transition: 'all 0.2s ease',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                    }} />
-                  </button>
+                  {/* Availability Toggle — admin only */}
+                  {isAdmin && (
+                    <button
+                      onClick={() => toggleAvailability(item)}
+                      style={{
+                        width: 44, height: 24, borderRadius: 12, border: 'none',
+                        background: item.is_available ? '#C8964B' : '#E0E0E0',
+                        cursor: 'pointer', position: 'relative', transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <span style={{
+                        width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                        position: 'absolute', top: 3,
+                        left: item.is_available ? 23 : 3,
+                        transition: 'all 0.2s ease', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                      }} />
+                    </button>
+                  )}
 
-                  {/* Bestseller Toggle */}
-                  <button
-                    onClick={() => toggleBestseller(item)}
-                    style={{
-                      height: 24,
-                      padding: '0 8px',
-                      borderRadius: 6,
-                      border: item.is_bestseller ? '1px solid #C8964B' : '1px solid #E8E4DE',
-                      background: item.is_bestseller ? '#FDF6EC' : '#fff',
-                      color: item.is_bestseller ? '#C8964B' : '#AAA',
-                      cursor: 'pointer',
-                      fontSize: 10,
-                      fontWeight: 600,
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    {item.is_bestseller ? 'Bestseller' : 'Set Best'}
-                  </button>
+                  {/* Bestseller Toggle — admin only */}
+                  {isAdmin && (
+                    <button
+                      onClick={() => toggleBestseller(item)}
+                      style={{
+                        height: 24, padding: '0 8px', borderRadius: 6,
+                        border: item.is_bestseller ? '1px solid #C8964B' : '1px solid #E8E4DE',
+                        background: item.is_bestseller ? '#FDF6EC' : '#fff',
+                        color: item.is_bestseller ? '#C8964B' : '#AAA',
+                        cursor: 'pointer', fontSize: 10, fontWeight: 600, transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {item.is_bestseller ? 'Bestseller' : 'Set Best'}
+                    </button>
+                  )}
+
+                  {/* Read-only status badge for delivery staff */}
+                  {!isAdmin && (
+                    <span style={{
+                      height: 24, padding: '0 10px', borderRadius: 6, display: 'flex', alignItems: 'center',
+                      background: item.is_available ? '#F0FDF4' : '#F5F5F5',
+                      color: item.is_available ? '#16A34A' : '#AAA',
+                      fontSize: 10, fontWeight: 600,
+                      border: `1px solid ${item.is_available ? '#BBF7D0' : '#E8E4DE'}`,
+                    }}>
+                      {item.is_available ? 'Available' : 'Unavailable'}
+                    </span>
+                  )}
                 </div>
 
-                {/* Delete */}
-                <button
-                  onClick={() => setDeleteId(item.id)}
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 8,
-                    border: '1px solid #FEE2E2',
-                    background: '#FEF2F2',
-                    color: '#DC2626',
-                    cursor: 'pointer',
-                    fontSize: 14,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#FEE2E2' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#FEF2F2' }}
-                >
-                  <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
-                </button>
+                {/* Delete — admin only */}
+                {isAdmin && (
+                  <button
+                    onClick={() => setDeleteId(item.id)}
+                    style={{
+                      width: 32, height: 32, borderRadius: 8,
+                      border: '1px solid #FEE2E2', background: '#FEF2F2',
+                      color: '#DC2626', cursor: 'pointer', fontSize: 14,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#FEE2E2' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#FEF2F2' }}
+                  >
+                    <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                  </button>
+                )}
               </div>
             </div>
           ))}

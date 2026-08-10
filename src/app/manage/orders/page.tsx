@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import api from '@/lib/api'
+import { useDeliveryTracking } from '@/hooks/useDeliveryTracking'
 
 const STATUS_TABS = ['all', 'pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled']
 
@@ -30,6 +31,9 @@ export default function OrdersPage() {
   const [isOwner, setIsOwner] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<number | null>(null)
   const [currentUserRole, setCurrentUserRole] = useState<string>('')
+
+  // Live GPS delivery tracking (staff side)
+  const { status: trackingStatus, startTracking, stopTracking, startSimulation, stopSimulation } = useDeliveryTracking(currentUserId)
   // Reject with reason modal
   const [rejectModal, setRejectModal] = useState<{ orderId: number; orderNumber: string } | null>(null)
   const [selectedReason, setSelectedReason] = useState('')
@@ -341,7 +345,11 @@ export default function OrdersPage() {
         </div>
       )}
 
-      <style>{`@keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(-8px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }`}</style>
+      <style>{`
+        @keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(-8px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+        @keyframes trackPulse { 0% { transform:scale(1); opacity:0.6; } 100% { transform:scale(2.5); opacity:0; } }
+        @keyframes spin { to { transform:rotate(360deg); } }
+      `}</style>
 
       <div style={{ marginBottom: 8 }}>
         <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1A1A1A', marginBottom: 8 }}>Orders</h1>
@@ -515,6 +523,111 @@ export default function OrdersPage() {
                   </button>
                 </div>
               )}
+
+              {/* ── Live GPS Tracking Button (staff assigned to this order) ── */}
+              {!isOwner && order.assigned_staff_id === currentUserId && order.status === 'ready' && (() => {
+                const isTrackingThis = trackingStatus.state === 'tracking' && trackingStatus.accuracy !== null
+                const isRequestingThis = trackingStatus.state === 'requesting'
+                const hasError = trackingStatus.state === 'error'
+
+                const errorMessages: Record<string, string> = {
+                  permission_denied: 'GPS permission denied. Enable location in browser settings.',
+                  position_unavailable: 'GPS unavailable. Use Simulate mode to test.',
+                  timeout: 'GPS timed out. Try Simulate mode instead.',
+                  not_assigned: 'You are no longer assigned to this order.',
+                  ws_disconnected: 'Connection lost. Reconnecting...',
+                }
+
+                return (
+                  <div style={{ marginBottom: 12 }}>
+                    {/* Main tracking button */}
+                    <button
+                      onClick={() => {
+                        if (isTrackingThis || isRequestingThis) {
+                          stopTracking()
+                          stopSimulation()
+                        } else {
+                          startTracking(order.id)
+                        }
+                      }}
+                      style={{
+                        width: '100%', height: 44, borderRadius: 10, border: 'none',
+                        background: isTrackingThis
+                          ? 'linear-gradient(135deg,#16A34A,#15803D)'
+                          : isRequestingThis ? '#F0FDF4'
+                          : hasError ? '#FEF2F2'
+                          : 'linear-gradient(135deg,#1A1A1A,#2D2D2D)',
+                        color: isTrackingThis ? '#fff' : isRequestingThis ? '#16A34A' : hasError ? '#DC2626' : '#fff',
+                        fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                        transition: 'all 0.2s',
+                        border: hasError ? '1px solid #FECACA' : isRequestingThis ? '1px solid #BBF7D0' : 'none',
+                      }}
+                    >
+                      {isTrackingThis ? (
+                        <div style={{ position: 'relative', width: 14, height: 14 }}>
+                          <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(255,255,255,0.3)', animation: 'trackPulse 1.5s ease-out infinite' }} />
+                          <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#fff', position: 'absolute' }} />
+                        </div>
+                      ) : isRequestingThis ? (
+                        <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid #16A34A', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+                      ) : (
+                        <svg width={16} height={16} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                        </svg>
+                      )}
+                      {isTrackingThis ? 'Sharing location — Stop' : isRequestingThis ? 'Getting GPS...' : hasError ? 'Retry GPS Tracking' : 'Start Live Tracking'}
+                    </button>
+
+                    {/* Simulate button — only shown when idle/error (for localhost testing) */}
+                    {!isTrackingThis && !isRequestingThis && (
+                      <button
+                        onClick={() => startSimulation(order.id)}
+                        style={{
+                          width: '100%', height: 36, borderRadius: 10, marginTop: 6,
+                          border: '1.5px dashed #C8964B', background: '#FFFDF5',
+                          color: '#B8860B', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        }}
+                      >
+                        <svg width={13} height={13} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z" />
+                        </svg>
+                        Simulate Delivery (test only)
+                      </button>
+                    )}
+
+                    {/* Stop simulation button */}
+                    {isTrackingThis && trackingStatus.sendCount > 0 && (
+                      <button
+                        onClick={stopSimulation}
+                        style={{ width: '100%', height: 32, borderRadius: 8, marginTop: 6, border: '1px solid #E8E4DE', background: '#fff', color: '#888', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Stop Simulation
+                      </button>
+                    )}
+
+                    {/* Tracking stats */}
+                    {isTrackingThis && (
+                      <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#16A34A', flexShrink: 0 }} />
+                        <span style={{ fontSize: 11, color: '#166534', fontWeight: 500 }}>
+                          Live • {trackingStatus.accuracy !== null ? `±${trackingStatus.accuracy}m` : 'Acquiring...'}
+                        </span>
+                        {trackingStatus.sendCount > 0 && (
+                          <span style={{ fontSize: 10, color: '#AAA', marginLeft: 'auto' }}>{trackingStatus.sendCount} updates sent</span>
+                        )}
+                      </div>
+                    )}
+                    {hasError && trackingStatus.error && (
+                      <div style={{ marginTop: 6, padding: '6px 10px', borderRadius: 8, background: '#FEF2F2', border: '1px solid #FECACA' }}>
+                        <p style={{ fontSize: 11, color: '#991B1B' }}>{errorMessages[trackingStatus.error] ?? 'GPS error. Use Simulate mode.'}</p>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
 
               {/* ── Assign Staff Section (owner + active orders) ── */}
               {isOwner && ['confirmed', 'preparing', 'ready'].includes(order.status) && (                <div style={{ marginBottom: 12, padding: '12px 12px', borderRadius: 10, border: '1px dashed #E8C987', background: '#FFFDF5' }}>

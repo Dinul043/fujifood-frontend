@@ -124,17 +124,37 @@ export function Header() {
     const label = `${a.label} — ${a.address_line1}, ${a.city}`
     setLocation(label)
     localStorage.setItem(LOCATION_KEY, label)
+    // Also store coords if address has them
+    if (a.latitude && a.longitude) {
+      localStorage.setItem(LOCATION_COORDS_KEY, JSON.stringify({ lat: a.latitude, lng: a.longitude }))
+    }
     setDropdownOpen(false)
     try {
-      const { data } = await api.post('/geo/check-delivery-address', {
-        address: a.address_line1,
-        city: a.city,
-        pincode: a.pincode || '',
-      })
+      let deliveryResult: any = null
+
+      // Use stored coords if available — more accurate than geocoding address text
+      if (a.latitude && a.longitude) {
+        const { data } = await api.post('/geo/check-delivery', {
+          latitude: a.latitude,
+          longitude: a.longitude,
+        })
+        deliveryResult = data
+      } else {
+        // Fall back to address text geocoding
+        const { data } = await api.post('/geo/check-delivery-address', {
+          address: a.address_line1,
+          city: a.city,
+          pincode: a.pincode || '',
+        })
+        deliveryResult = data
+      }
+
       sessionStorage.setItem('zone_checked', '1')
-      if (!data.deliverable) { setOutOfRangeMsg(data.message); setOutOfRange(true) }
+      if (deliveryResult && !deliveryResult.deliverable) {
+        setOutOfRangeMsg(deliveryResult.message)
+        setOutOfRange(true)
+      }
     } catch {
-      // Backend unreachable — show warning
       setOutOfRangeMsg('Could not verify delivery area. Please ensure you are within our delivery zone.')
       setOutOfRange(true)
     }

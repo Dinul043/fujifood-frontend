@@ -31,6 +31,7 @@ export default function OrdersPage() {
   const [isOwner, setIsOwner] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<number | null>(null)
   const [currentUserRole, setCurrentUserRole] = useState<string>('')
+  const [restaurantCoords, setRestaurantCoords] = useState<{ lat: number; lng: number } | null>(null)
 
   // Live GPS delivery tracking (staff side) — per-order state
   const { getStatus, isTracking, startTracking, stopTracking, startSimulation, stopSimulation } = useDeliveryTracking(currentUserId)
@@ -118,6 +119,16 @@ export default function OrdersPage() {
         }
         setCurrentUserId(me.id)
         setCurrentUserRole(me.role)
+      } catch {}
+    })()
+    // Fetch restaurant coords for simulation start point
+    ;(async () => {
+      try {
+        const slug = process.env.NEXT_PUBLIC_TENANT_SLUG || 'a2b'
+        const { data: restaurant } = await api.get(`/restaurants/storefront/${slug}`)
+        if (restaurant.latitude && restaurant.longitude) {
+          setRestaurantCoords({ lat: restaurant.latitude, lng: restaurant.longitude })
+        }
       } catch {}
     })()
   }, [])
@@ -584,7 +595,7 @@ export default function OrdersPage() {
                     {/* Simulate button — only when idle/error */}
                     {!isTrackingThis && !isRequestingThis && (
                       <button
-                        onClick={() => startSimulation(order.id)}
+                        onClick={() => startSimulation(order.id, restaurantCoords?.lat, restaurantCoords?.lng)}
                         style={{
                           width: '100%', height: 36, borderRadius: 10, marginTop: 6,
                           border: '1.5px dashed #C8964B', background: '#FFFDF5',

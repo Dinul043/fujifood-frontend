@@ -243,7 +243,7 @@ export function stopTracking(orderId: number) {
   console.log('[Tracking] Stopped tracking for order', orderId)
 }
 
-export function startSimulation(userId: number, orderId: number) {
+export function startSimulation(userId: number, orderId: number, restaurantLat?: number, restaurantLng?: number) {
   if (_sessions.has(orderId)) cleanupSession(orderId)
 
   const session: TrackingSession = { orderId, watchId: null, simInterval: null, reconnectTimer: null }
@@ -253,21 +253,21 @@ export function startSimulation(userId: number, orderId: number) {
   console.log('[Tracking] Starting simulation for order', orderId)
 
   ensureWebSocket(userId, () => {
-    // Start simulation after WS is ready
-    runSimulation(orderId, session)
+    runSimulation(orderId, session, restaurantLat, restaurantLng)
   })
 
-  // Also start immediately in case WS is already open
   if (_ws?.readyState === WebSocket.OPEN) {
-    runSimulation(orderId, session)
+    runSimulation(orderId, session, restaurantLat, restaurantLng)
   }
 }
 
-function runSimulation(orderId: number, session: TrackingSession) {
-  if (session.simInterval) return // already running
-  const startLat = 12.9010
-  const startLng = 80.2279
+function runSimulation(orderId: number, session: TrackingSession, startLat?: number, startLng?: number) {
+  if (session.simInterval) return
+  // Start from restaurant coords if provided, otherwise default to Sholinganallur
+  const lat0 = startLat ?? 12.9010
+  const lng0 = startLng ?? 80.2279
   let step = 0
+  console.log(`[Simulation] Starting from lat:${lat0} lng:${lng0}`)
 
   session.simInterval = setInterval(() => {
     if (!_sessions.has(orderId)) return
@@ -276,8 +276,9 @@ function runSimulation(orderId: number, session: TrackingSession) {
     step++
     if (step >= 60) { stopTracking(orderId); return }
 
-    const lat = startLat + step * 0.00009
-    const lng = startLng + step * 0.00004
+    // Move ~10m per step in a random direction (simulates real movement)
+    const lat = lat0 + step * 0.00009
+    const lng = lng0 + step * 0.00004
     const accuracy = 10 + Math.random() * 5
 
     console.log(`[Simulation] Order#${orderId} Step${step} → lat:${lat.toFixed(5)} lng:${lng.toFixed(5)}`)
@@ -321,8 +322,8 @@ export function useDeliveryTracking(userId: number | null) {
       if (userId) startTracking(userId, orderId)
     }, [userId]),
     stopTracking: useCallback((orderId: number) => stopTracking(orderId), []),
-    startSimulation: useCallback((orderId: number) => {
-      if (userId) startSimulation(userId, orderId)
+    startSimulation: useCallback((orderId: number, restaurantLat?: number, restaurantLng?: number) => {
+      if (userId) startSimulation(userId, orderId, restaurantLat, restaurantLng)
     }, [userId]),
     stopSimulation: useCallback((orderId: number) => stopSimulation(orderId), []),
   }

@@ -102,6 +102,30 @@ export default function OrdersPage() {
   const [staffLocations, setStaffLocations] = useState<Record<number, StaffLocation>>({})
   // Restaurant coords (fetched once, used in all maps)
   const [restaurantCoords, setRestaurantCoords] = useState<{ lat: number; lng: number } | null>(null)
+  // Resolved customer coords: order_id → { lat, lng } (geocoded if delivery_address has no coords)
+  const [resolvedCustomerCoords, setResolvedCustomerCoords] = useState<Record<number, { lat: number; lng: number }>>({})
+
+  // Geocode a delivery address to get lat/lng for the map
+  const resolveOrderCoords = useCallback(async (order: Order) => {
+    if (!order.delivery_address) return
+    const addr = order.delivery_address
+    // Already have coords
+    if (addr.latitude && addr.longitude) {
+      setResolvedCustomerCoords(prev => ({ ...prev, [order.id]: { lat: addr.latitude!, lng: addr.longitude! } }))
+      return
+    }
+    // Geocode via backend
+    try {
+      const { data } = await api.post('/geo/check-delivery-address', {
+        address: addr.line1 || '',
+        city: addr.city || '',
+        pincode: addr.pincode || '',
+      })
+      if (data.lat && data.lng) {
+        setResolvedCustomerCoords(prev => ({ ...prev, [order.id]: { lat: data.lat, lng: data.lng } }))
+      }
+    } catch {}
+  }, [])
 
   const handleOrderAgain = async (order: Order) => {
     setOrderingAgain(order.id)
@@ -145,12 +169,15 @@ export default function OrdersPage() {
             setRestaurantCoords({ lat: restaurant.latitude, lng: restaurant.longitude })
           }
         } catch {}
-        // Try to fetch last-known staff location (staff may not have started tracking yet — 404 is normal)
-        const activeOrders = (data.orders || []).filter(
+        // Resolve customer delivery coords for tracking map
+        // (old orders may not have lat/lng in delivery_address — geocode them)
+        const trackableOrders = (data.orders || []).filter(
           (o: Order) => o.assigned_staff_name && ['ready', 'out_for_delivery'].includes(o.status)
         )
+        trackableOrders.forEach((o: Order) => resolveOrderCoords(o))
+        // Try to fetch last-known staff location (404 is normal — staff not broadcasting yet)
         await Promise.allSettled(
-          activeOrders.map(async (o: Order) => {
+          trackableOrders.map(async (o: Order) => {
             try {
               // Use native fetch so 404 doesn't log to console (axios logs all 4xx)
               const base = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1')
@@ -184,13 +211,18 @@ export default function OrdersPage() {
       const { order_id, status, assigned_staff_name, assigned_staff_phone, rejection_reason } = msg.data
       setOrders(prev => prev.map(o => {
         if (o.id !== order_id) return o
-        return {
+        const updated = {
           ...o,
           status: status || o.status,
           ...(assigned_staff_name !== undefined ? { assigned_staff_name } : {}),
           ...(assigned_staff_phone !== undefined ? { assigned_staff_phone } : {}),
           ...(rejection_reason !== undefined ? { rejection_reason } : {}),
         }
+        // Resolve customer coords when order becomes active for tracking
+        if (['ready', 'out_for_delivery'].includes(updated.status) && updated.assigned_staff_name) {
+          resolveOrderCoords(updated)
+        }
+        return updated
       }))
     }
     // Live GPS from delivery staff
@@ -279,8 +311,8 @@ export default function OrdersPage() {
                         orderNumber={order.order_number}
                         restaurantLat={restaurantCoords?.lat}
                         restaurantLng={restaurantCoords?.lng}
-                        customerLat={order.delivery_address?.latitude}
-                        customerLng={order.delivery_address?.longitude}
+                        customerLat={order.delivery_address?.latitude ?? resolvedCustomerCoords[order.id]?.lat}
+                        customerLng={order.delivery_address?.longitude ?? resolvedCustomerCoords[order.id]?.lng}
                         staffLocation={staffLocations[order.id] ?? null}
                         isMobile={false}
                       />
@@ -425,8 +457,8 @@ export default function OrdersPage() {
                         orderNumber={order.order_number}
                         restaurantLat={restaurantCoords?.lat}
                         restaurantLng={restaurantCoords?.lng}
-                        customerLat={order.delivery_address?.latitude}
-                        customerLng={order.delivery_address?.longitude}
+                        customerLat={order.delivery_address?.latitude ?? resolvedCustomerCoords[order.id]?.lat}
+                        customerLng={order.delivery_address?.longitude ?? resolvedCustomerCoords[order.id]?.lng}
                         staffLocation={staffLocations[order.id] ?? null}
                         isMobile={true}
                       />

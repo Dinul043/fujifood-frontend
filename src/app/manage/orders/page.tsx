@@ -32,8 +32,8 @@ export default function OrdersPage() {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null)
   const [currentUserRole, setCurrentUserRole] = useState<string>('')
 
-  // Live GPS delivery tracking (staff side)
-  const { status: trackingStatus, startTracking, stopTracking, startSimulation, stopSimulation } = useDeliveryTracking(currentUserId)
+  // Live GPS delivery tracking (staff side) — per-order state
+  const { getStatus, isTracking, startTracking, stopTracking, startSimulation, stopSimulation } = useDeliveryTracking(currentUserId)
   // Reject with reason modal
   const [rejectModal, setRejectModal] = useState<{ orderId: number; orderNumber: string } | null>(null)
   const [selectedReason, setSelectedReason] = useState('')
@@ -136,6 +136,8 @@ export default function OrdersPage() {
     setUpdating(orderId)
     try {
       await api.patch(`/orders/manage/${orderId}/status`, { status: newStatus })
+      // Auto-stop tracking when delivered
+      if (newStatus === 'delivered') stopTracking(orderId)
       await fetchOrders()
     } catch {} finally {
       setUpdating(null)
@@ -526,16 +528,16 @@ export default function OrdersPage() {
 
               {/* ── Live GPS Tracking Button (staff assigned to this order) ── */}
               {!isOwner && order.assigned_staff_id === currentUserId && order.status === 'ready' && (() => {
-                const isTrackingThis = trackingStatus.state === 'tracking' && trackingStatus.accuracy !== null
-                const isRequestingThis = trackingStatus.state === 'requesting'
-                const hasError = trackingStatus.state === 'error'
+                const ts = getStatus(order.id)
+                const isTrackingThis = ts.state === 'tracking'
+                const isRequestingThis = ts.state === 'requesting'
+                const hasError = ts.state === 'error'
 
                 const errorMessages: Record<string, string> = {
                   permission_denied: 'GPS permission denied. Enable location in browser settings.',
                   position_unavailable: 'GPS unavailable. Use Simulate mode to test.',
                   timeout: 'GPS timed out. Try Simulate mode instead.',
                   not_assigned: 'You are no longer assigned to this order.',
-                  ws_disconnected: 'Connection lost. Reconnecting...',
                 }
 
                 return (
@@ -544,14 +546,13 @@ export default function OrdersPage() {
                     <button
                       onClick={() => {
                         if (isTrackingThis || isRequestingThis) {
-                          stopTracking()
-                          stopSimulation()
+                          stopTracking(order.id)
                         } else {
                           startTracking(order.id)
                         }
                       }}
                       style={{
-                        width: '100%', height: 44, borderRadius: 10, border: 'none',
+                        width: '100%', height: 44, borderRadius: 10,
                         background: isTrackingThis
                           ? 'linear-gradient(135deg,#16A34A,#15803D)'
                           : isRequestingThis ? '#F0FDF4'
@@ -577,10 +578,10 @@ export default function OrdersPage() {
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
                         </svg>
                       )}
-                      {isTrackingThis ? 'Sharing location — Stop' : isRequestingThis ? 'Getting GPS...' : hasError ? 'Retry GPS Tracking' : 'Start Live Tracking'}
+                      {isTrackingThis ? 'Sharing location — Stop' : isRequestingThis ? 'Getting GPS...' : hasError ? 'Retry Tracking' : 'Start Live Tracking'}
                     </button>
 
-                    {/* Simulate button — only shown when idle/error (for localhost testing) */}
+                    {/* Simulate button — only when idle/error */}
                     {!isTrackingThis && !isRequestingThis && (
                       <button
                         onClick={() => startSimulation(order.id)}
@@ -598,31 +599,23 @@ export default function OrdersPage() {
                       </button>
                     )}
 
-                    {/* Stop simulation button */}
-                    {isTrackingThis && trackingStatus.sendCount > 0 && (
-                      <button
-                        onClick={stopSimulation}
-                        style={{ width: '100%', height: 32, borderRadius: 8, marginTop: 6, border: '1px solid #E8E4DE', background: '#fff', color: '#888', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
-                      >
-                        Stop Simulation
-                      </button>
-                    )}
-
                     {/* Tracking stats */}
                     {isTrackingThis && (
                       <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 8, background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
-                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#16A34A', flexShrink: 0 }} />
+                        <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#16A34A' }} />
                         <span style={{ fontSize: 11, color: '#166534', fontWeight: 500 }}>
-                          Live • {trackingStatus.accuracy !== null ? `±${trackingStatus.accuracy}m` : 'Acquiring...'}
+                          Live • {ts.accuracy !== null ? `±${ts.accuracy}m` : 'Acquiring...'}
                         </span>
-                        {trackingStatus.sendCount > 0 && (
-                          <span style={{ fontSize: 10, color: '#AAA', marginLeft: 'auto' }}>{trackingStatus.sendCount} updates sent</span>
+                        {ts.sendCount > 0 && (
+                          <span style={{ fontSize: 10, color: '#AAA', marginLeft: 'auto' }}>{ts.sendCount} updates sent</span>
                         )}
                       </div>
                     )}
-                    {hasError && trackingStatus.error && (
+                    {hasError && ts.error && (
                       <div style={{ marginTop: 6, padding: '6px 10px', borderRadius: 8, background: '#FEF2F2', border: '1px solid #FECACA' }}>
-                        <p style={{ fontSize: 11, color: '#991B1B' }}>{errorMessages[trackingStatus.error] ?? 'GPS error. Use Simulate mode.'}</p>
+                        <p style={{ fontSize: 11, color: '#991B1B' }}>
+                          {errorMessages[ts.error as string] ?? 'GPS error. Use Simulate mode.'}
+                        </p>
                       </div>
                     )}
                   </div>

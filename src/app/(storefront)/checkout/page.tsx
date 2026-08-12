@@ -125,7 +125,12 @@ export default function CheckoutPage() {
       // Step 1: Create order
       const orderData = {
         items: items.map((i) => ({ menu_item_id: i.id, quantity: i.qty })),
-        delivery_address: { line1, line2, city, state, pincode, phone: customerPhone },
+        delivery_address: {
+          line1, line2, city, state, pincode, phone: customerPhone,
+          // Include GPS coords if available — used for live tracking map
+          latitude: lat || null,
+          longitude: lng || null,
+        },
         payment_method: paymentMethod,
       }
       const { data: order } = await api.post('/orders/place', orderData)

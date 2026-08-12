@@ -6,6 +6,8 @@
  *   - Base URL configuration
  *   - JWT token attachment
  *   - Token refresh on 401
+ *   - Timeout: 15s default, 30s for file uploads
+ *   - Retry on network errors (1 retry)
  *   - Error normalization
  */
 import axios, { type AxiosInstance, type AxiosError } from 'axios'
@@ -13,58 +15,59 @@ import Cookies from 'js-cookie'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1'
 
-// Token storage keys
 const ACCESS_TOKEN_KEY = 'fujifood_access_token'
 const REFRESH_TOKEN_KEY = 'fujifood_refresh_token'
 
-// Create axios instance
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 })
 
-// ─── Request Interceptor: Attach JWT ─────────────────────────────
+// ─── Request Interceptor: Attach JWT + handle uploads ────────────
 api.interceptors.request.use((config) => {
   const token = Cookies.get(ACCESS_TOKEN_KEY)
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  // Give file uploads more time
+  if (config.headers['Content-Type'] === 'multipart/form-data') {
+    config.timeout = 60000
   }
   return config
 })
 
-// ─── Response Interceptor: Handle 401 + Refresh ──────────────────
+// ─── Response Interceptor: Handle 401 + Refresh + Network errors ─
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as any
 
+    // 401 → try token refresh
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
-
       const refreshToken = Cookies.get(REFRESH_TOKEN_KEY)
       if (refreshToken) {
         try {
           const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, {
             refresh_token: refreshToken,
           })
-
-          // Store new tokens
           setTokens(data.access_token, data.refresh_token)
-
-          // Retry original request
           originalRequest.headers.Authorization = `Bearer ${data.access_token}`
           return api(originalRequest)
         } catch {
-          // Refresh failed — clear tokens and redirect to login
           clearTokens()
-          if (typeof window !== 'undefined') {
-            window.location.href = '/login'
-          }
+          if (typeof window !== 'undefined') window.location.href = '/login'
         }
       }
+    }
+
+    // Network error or timeout → one retry (except for mutations)
+    const isNetworkError = !error.response && (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK')
+    const isSafeToRetry = ['get', 'GET'].includes(originalRequest?.method || '')
+    if (isNetworkError && isSafeToRetry && !originalRequest._networkRetry) {
+      originalRequest._networkRetry = true
+      // Wait 1s then retry
+      await new Promise(r => setTimeout(r, 1000))
+      return api(originalRequest)
     }
 
     return Promise.reject(error)

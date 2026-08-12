@@ -52,12 +52,17 @@ export function Header() {
     const saved = localStorage.getItem(LOCATION_KEY)
     if (saved) setLocation(saved)
 
-    // Auto-detect ONLY on very first visit (no coords stored at all)
-    if (!localStorage.getItem(LOCATION_CHECKED_KEY) && !localStorage.getItem(LOCATION_COORDS_KEY)) {
-      localStorage.setItem(LOCATION_CHECKED_KEY, '1')
+    // Auto-detect on first visit OR if no coords stored yet
+    // Uses sessionStorage so it re-checks every new browser session
+    const hasCoords = !!localStorage.getItem(LOCATION_COORDS_KEY)
+    const checkedThisSession = !!sessionStorage.getItem('zone_checked')
+
+    if (!hasCoords && !checkedThisSession) {
+      // No coords at all — auto detect immediately
+      sessionStorage.setItem('zone_checked', '1')
       detectLocation()
-    } else if (localStorage.getItem(LOCATION_COORDS_KEY) && !sessionStorage.getItem('zone_checked')) {
-      // Coords exist but not checked this session → silently verify zone
+    } else if (hasCoords && !checkedThisSession) {
+      // Have coords but new session — silently verify zone
       sessionStorage.setItem('zone_checked', '1')
       checkStoredCoords(setOutOfRange, setOutOfRangeMsg)
     }
@@ -300,8 +305,14 @@ export function Header() {
             onClick={(e) => {
               if (isLoggedIn) {
                 e.preventDefault()
+                // Clear auth tokens
                 document.cookie = 'fujifood_access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
                 document.cookie = 'fujifood_refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;'
+                // Clear location so it re-detects on next visit
+                localStorage.removeItem(LOCATION_KEY)
+                localStorage.removeItem(LOCATION_COORDS_KEY)
+                localStorage.removeItem(LOCATION_CHECKED_KEY)
+                sessionStorage.removeItem('zone_checked')
                 window.location.href = '/'
               }
             }}

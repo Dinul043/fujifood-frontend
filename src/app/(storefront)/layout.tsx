@@ -82,10 +82,10 @@ export default function StorefrontLayout({ children }: { children: React.ReactNo
       }
       const baseMessage = messages[status] || `Status: ${status}`
       const detailMessage = status === 'rejected' || status === 'cancelled'
-        ? `${baseMessage}${rejection_reason ? ` — ${rejection_reason}` : ''}`
+        ? baseMessage
         : baseMessage
       setToast({ message: detailMessage, status })
-      setTimeout(() => setToast(null), 4000)
+      setTimeout(() => setToast(null), 10000)
 
       if (typeof window !== 'undefined') {
         const saved: CustomerNotification[] = JSON.parse(localStorage.getItem(CUSTOMER_NOTIFICATION_KEY) || '[]')

@@ -231,14 +231,9 @@ export default function OrdersPage() {
           <div style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 420, boxShadow: '0 32px 80px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
             {/* Header */}
             <div style={{ padding: '24px 28px 20px', borderBottom: '1px solid #F0F0F0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <svg width={18} height={18} fill="none" viewBox="0 0 24 24" stroke="#DC2626" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                </div>
-                <div>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A', marginBottom: 2 }}>Reject Order #{rejectModal.orderNumber}</h3>
-                  <p style={{ fontSize: 12, color: '#888' }}>Select a reason — this will be shown to the customer</p>
-                </div>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A', marginBottom: 2 }}>Reject Order #{rejectModal.orderNumber}</h3>
+                <p style={{ fontSize: 12, color: '#888' }}>Select a reason — this will be shown to the customer</p>
               </div>
             </div>
 
@@ -298,14 +293,9 @@ export default function OrdersPage() {
           <div style={{ background: '#fff', borderRadius: 24, width: '100%', maxWidth: 420, boxShadow: '0 32px 80px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
             {/* Header */}
             <div style={{ padding: '24px 28px 20px', borderBottom: '1px solid #F0F0F0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#FFF7ED', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <svg width={18} height={18} fill="none" viewBox="0 0 24 24" stroke="#D97706" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
-                </div>
-                <div>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A', marginBottom: 2 }}>Cancel Order #{cancelReasonModal.orderNumber}</h3>
-                  <p style={{ fontSize: 12, color: '#888' }}>Select a reason — this will be shared with the customer</p>
-                </div>
+              <div>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: '#1A1A1A', marginBottom: 2 }}>Cancel Order #{cancelReasonModal.orderNumber}</h3>
+                <p style={{ fontSize: 12, color: '#888' }}>Select a reason — this will be shared with the customer</p>
               </div>
             </div>
 

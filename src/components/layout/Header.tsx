@@ -330,18 +330,15 @@ export function Header() {
             </span>
           </a>
 
-          {/* Notification badge shown when new customer updates arrive */}
+          {/* Unread order badge only — keep it minimal next to cart */}
           <a
             href="/orders"
             className="relative text-[#999] hover:text-white transition-colors duration-200"
             aria-label="View orders"
-            style={{ marginRight: '18px' }}
+            style={{ marginRight: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: '12px' }}
           >
-            <svg className="w-[20px] h-[20px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 7.5V6.75a3.75 3.75 0 1 1 7.5 0v.75M5.25 7.5h13.5l-1.125 10.125A2.25 2.25 0 0 1 15.375 19.5h-6.75A2.25 2.25 0 0 1 6.375 17.625L5.25 7.5Z" />
-            </svg>
             {unreadNotificationCount > 0 && (
-              <span className="absolute -top-[8px] -right-[8px] min-w-[18px] h-[18px] rounded-full bg-[#DC2626] text-white text-[10px] font-bold flex items-center justify-center px-[5px] ring-2 ring-[#141414]">
+              <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-[#DC2626] text-white text-[10px] font-bold px-[5px] ring-2 ring-[#141414]">
                 {Math.min(unreadNotificationCount, 9)}
               </span>
             )}

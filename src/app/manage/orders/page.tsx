@@ -110,8 +110,9 @@ export default function OrdersPage() {
     ;(async () => {
       try {
         const { data: me } = await api.get('/auth/me')
-        if (me.is_owner) {
-          setIsOwner(true)
+        const isRestaurantAdmin = me.role === 'restaurant_admin'
+        setIsOwner(Boolean(me.is_owner))
+        if (isRestaurantAdmin) {
           try {
             const { data: staff } = await api.get('/delivery/staff-list')
             setDeliveryStaff(staff || [])
@@ -546,8 +547,8 @@ export default function OrdersPage() {
 
                 const errorMessages: Record<string, string> = {
                   permission_denied: 'GPS permission denied. Enable location in browser settings.',
-                  position_unavailable: 'GPS unavailable. Use Simulate mode to test.',
-                  timeout: 'GPS timed out. Try Simulate mode instead.',
+                  position_unavailable: 'GPS unavailable. Please try again when location is available.',
+                  timeout: 'GPS timed out. Please try again.',
                   not_assigned: 'You are no longer assigned to this order.',
                 }
 
@@ -591,24 +592,6 @@ export default function OrdersPage() {
                       )}
                       {isTrackingThis ? 'Sharing location — Stop' : isRequestingThis ? 'Getting GPS...' : hasError ? 'Retry Tracking' : 'Start Live Tracking'}
                     </button>
-
-                    {/* Simulate button — only when idle/error */}
-                    {!isTrackingThis && !isRequestingThis && (
-                      <button
-                        onClick={() => startSimulation(order.id, restaurantCoords?.lat, restaurantCoords?.lng)}
-                        style={{
-                          width: '100%', height: 36, borderRadius: 10, marginTop: 6,
-                          border: '1.5px dashed #C8964B', background: '#FFFDF5',
-                          color: '#B8860B', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                        }}
-                      >
-                        <svg width={13} height={13} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z" />
-                        </svg>
-                        Simulate Delivery (test only)
-                      </button>
-                    )}
 
                     {/* Tracking stats */}
                     {isTrackingThis && (

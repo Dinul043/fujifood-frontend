@@ -8,9 +8,14 @@ import { useCart } from '@/hooks/useCart'
  * Mobile: Stacked
  */
 export default function CartPage() {
-  const { items, total, updateQty } = useCart()
+  const { items, total, updateQty, hydrated } = useCart()
   const deliveryFee = total >= 299 ? 0 : 30
   const grandTotal = total + deliveryFee
+
+  if (!hydrated) {
+    return null
+  }
+
   if (items.length === 0) {
     return (
       <>

@@ -11,9 +11,9 @@ import { useWebSocket } from '@/hooks/useWebSocket'
  * WebSocket: ws://host/ws/customer/{user_id} for live status changes + staff GPS
  */
 
-// Dynamic import — Leaflet requires browser APIs, cannot SSR
-const LiveTrackingMap = dynamic(
-  () => import('@/components/tracking/LiveTrackingMap'),
+// Dynamic import — Google Maps requires browser APIs, cannot SSR
+const GoogleMapsTracker = dynamic(
+  () => import('@/components/tracking/GoogleMapsTracker'),
   { ssr: false, loading: () => null }
 )
 
@@ -149,6 +149,15 @@ export default function OrdersPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     setNewOrder(params.get('new'))
+
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = JSON.parse(localStorage.getItem('fujifood_customer_notifications') || '[]') as Array<{ read?: boolean; id?: string }>
+        const updated = saved.map((item) => ({ ...item, read: true }))
+        localStorage.setItem('fujifood_customer_notifications', JSON.stringify(updated))
+        window.dispatchEvent(new CustomEvent('fujifood-clear-notifications'))
+      } catch {}
+    }
 
     async function fetchOrders() {
       try {
@@ -306,7 +315,7 @@ export default function OrdersPage() {
 
                     {/* ── Live Tracking Map ── */}
                     {order.assigned_staff_name && ['ready', 'out_for_delivery'].includes(order.status) && (
-                      <LiveTrackingMap
+                      <GoogleMapsTracker
                         orderId={order.id}
                         orderNumber={order.order_number}
                         restaurantLat={restaurantCoords?.lat}
@@ -452,7 +461,7 @@ export default function OrdersPage() {
 
                     {/* ── Live Tracking Map (mobile) ── */}
                     {order.assigned_staff_name && ['ready', 'out_for_delivery'].includes(order.status) && (
-                      <LiveTrackingMap
+                      <GoogleMapsTracker
                         orderId={order.id}
                         orderNumber={order.order_number}
                         restaurantLat={restaurantCoords?.lat}

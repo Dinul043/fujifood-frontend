@@ -7,6 +7,19 @@ import { MobileHeader } from '@/components/mobile/MobileHeader'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import api from '@/lib/api'
 
+const CUSTOMER_NOTIFICATION_KEY = 'fujifood_customer_notifications'
+
+interface CustomerNotification {
+  id: string
+  title: string
+  message: string
+  status: string
+  orderId?: number
+  orderNumber?: string
+  read: boolean
+  createdAt: string
+}
+
 /**
  * StorefrontLayout — wraps all customer pages.
  * Includes global WebSocket for order status notifications + review prompt.
@@ -19,11 +32,36 @@ export default function StorefrontLayout({ children }: { children: React.ReactNo
   const [reviewRating, setReviewRating] = useState(0)
   const [reviewComment, setReviewComment] = useState('')
 
+  const persistNotifications = useCallback((next: CustomerNotification[]) => {
+    if (typeof window === 'undefined') return
+    localStorage.setItem(CUSTOMER_NOTIFICATION_KEY, JSON.stringify(next))
+    window.dispatchEvent(new CustomEvent('fujifood-notification-update', { detail: { count: next.filter(n => !n.read).length } }))
+  }, [])
+
+  const markNotificationsRead = useCallback(() => {
+    if (typeof window === 'undefined') return
+    const next: CustomerNotification[] = []
+    localStorage.setItem(CUSTOMER_NOTIFICATION_KEY, JSON.stringify(next))
+    window.dispatchEvent(new CustomEvent('fujifood-notification-update', { detail: { count: 0 } }))
+    window.dispatchEvent(new CustomEvent('fujifood-clear-notifications'))
+  }, [])
+
   useEffect(() => {
     (async () => {
       try { const { data } = await api.get('/restaurants/storefront/a2b'); setRestaurant(data) } catch {}
       try { const { data } = await api.get('/auth/me'); setUserId(data.id) } catch {}
     })()
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handleClear = () => {
+      const next: CustomerNotification[] = []
+      localStorage.setItem(CUSTOMER_NOTIFICATION_KEY, JSON.stringify(next))
+      window.dispatchEvent(new CustomEvent('fujifood-notification-update', { detail: { count: 0 } }))
+    }
+    window.addEventListener('fujifood-clear-notifications', handleClear)
+    return () => window.removeEventListener('fujifood-clear-notifications', handleClear)
   }, [])
 
   // Global WebSocket for customer — order status updates on any page
@@ -33,7 +71,7 @@ export default function StorefrontLayout({ children }: { children: React.ReactNo
 
   const handleWsMessage = useCallback((msg: { event: string; data: any }) => {
     if (msg.event === 'order_status_updated') {
-      const { status, order_number, order_id } = msg.data
+      const { status, order_number, order_id, rejection_reason } = msg.data
       const messages: Record<string, string> = {
         confirmed: 'Order confirmed by restaurant',
         preparing: 'Your food is being prepared',
@@ -42,8 +80,28 @@ export default function StorefrontLayout({ children }: { children: React.ReactNo
         cancelled: 'Order has been cancelled',
         rejected: 'Order was rejected',
       }
-      setToast({ message: messages[status] || `Status: ${status}`, status })
+      const baseMessage = messages[status] || `Status: ${status}`
+      const detailMessage = status === 'rejected' || status === 'cancelled'
+        ? `${baseMessage}${rejection_reason ? ` — ${rejection_reason}` : ''}`
+        : baseMessage
+      setToast({ message: detailMessage, status })
       setTimeout(() => setToast(null), 4000)
+
+      if (typeof window !== 'undefined') {
+        const saved: CustomerNotification[] = JSON.parse(localStorage.getItem(CUSTOMER_NOTIFICATION_KEY) || '[]')
+        const newNotification: CustomerNotification = {
+          id: `${order_id || Date.now()}-${status}-${Date.now()}`,
+          title: status === 'rejected' ? 'Order rejected' : status === 'cancelled' ? 'Order cancelled' : 'Order update',
+          message: detailMessage,
+          status,
+          orderId: order_id,
+          orderNumber: order_number,
+          read: false,
+          createdAt: new Date().toISOString(),
+        }
+        const merged = [newNotification, ...saved].slice(0, 25)
+        persistNotifications(merged)
+      }
 
       // If delivered → prompt review after a short delay
       if (status === 'delivered') {
@@ -52,7 +110,7 @@ export default function StorefrontLayout({ children }: { children: React.ReactNo
         }, 2000)
       }
     }
-  }, [])
+  }, [persistNotifications])
 
   useWebSocket(wsUrl, handleWsMessage)
 

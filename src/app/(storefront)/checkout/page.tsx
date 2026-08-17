@@ -9,7 +9,7 @@ import api from '@/lib/api'
  * Wired to real API: POST /orders/place
  */
 export default function CheckoutPage() {
-  const { items, total, clearCart } = useCart()
+  const { items, total, clearCart, hydrated } = useCart()
   const [paymentMethod, setPaymentMethod] = useState('cod')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -91,14 +91,16 @@ export default function CheckoutPage() {
     if (locationBlocked) { setLocationBlocked(false); setDeliveryWarning('') }
   }
 
-  // Redirect if cart empty (but NOT after successful order placement)
+  // Redirect if cart is still empty after the cart has finished loading
   useEffect(() => {
+    if (!hydrated) return
     if (typeof window !== 'undefined' && items.length === 0 && !orderSuccess) {
-      // Small delay for hydration
-      const t = setTimeout(() => { if (items.length === 0 && !orderSuccess) window.location.href = '/menu' }, 1500)
+      const t = setTimeout(() => {
+        if (items.length === 0 && !orderSuccess) window.location.href = '/menu'
+      }, 300)
       return () => clearTimeout(t)
     }
-  }, [items, orderSuccess])
+  }, [items, orderSuccess, hydrated])
 
   const handlePlaceOrder = async () => {
     setError('')
@@ -192,6 +194,7 @@ export default function CheckoutPage() {
     }
   }
 
+  if (!hydrated) return null
   if (items.length === 0 && !orderSuccess) return null
 
   // Order success popup

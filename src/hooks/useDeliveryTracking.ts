@@ -37,6 +37,7 @@ const WS_BASE = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v
   .replace(/^http/, 'ws')
 
 interface TrackingSession {
+  userId: number
   orderId: number
   watchId: number | null          // geolocation watchPosition id
   simInterval: ReturnType<typeof setInterval> | null
@@ -207,7 +208,7 @@ export function startTracking(userId: number, orderId: number) {
   }
   if (_sessions.has(orderId)) cleanupSession(orderId) // clean up any stale session
 
-  const session: TrackingSession = { orderId, watchId: null, simInterval: null, reconnectTimer: null }
+  const session: TrackingSession = { userId, orderId, watchId: null, simInterval: null, reconnectTimer: null }
   _sessions.set(orderId, session)
 
   setOrderState(orderId, { state: 'requesting', error: null, accuracy: null, sendCount: 0 })
@@ -226,12 +227,21 @@ export function startTracking(userId: number, orderId: number) {
       }
     },
     (err) => {
-      console.error('[Tracking] GPS error', err.code, err.message)
       const map: Record<number, TrackingError> = { 1: 'permission_denied', 2: 'position_unavailable', 3: 'timeout' }
+      if (err.code === 3) {
+        // GPS timeout is transient, especially indoors. Retry without ending the order session.
+        console.warn('[Tracking] GPS timeout; retrying location request')
+        if (session.watchId !== null) navigator.geolocation.clearWatch(session.watchId)
+        session.watchId = null
+        setOrderState(orderId, { state: 'requesting', error: null })
+        session.reconnectTimer = setTimeout(() => startTracking(userId, orderId), 3000)
+        return
+      }
+      console.error('[Tracking] GPS error', err.code, err.message)
       setOrderState(orderId, { state: 'error', error: map[err.code] ?? 'position_unavailable' })
       cleanupSession(orderId)
     },
-    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    { enableHighAccuracy: false, timeout: 30000, maximumAge: 5000 }
   )
 
   session.watchId = watchId
@@ -246,7 +256,7 @@ export function stopTracking(orderId: number) {
 export function startSimulation(userId: number, orderId: number, restaurantLat?: number, restaurantLng?: number) {
   if (_sessions.has(orderId)) cleanupSession(orderId)
 
-  const session: TrackingSession = { orderId, watchId: null, simInterval: null, reconnectTimer: null }
+  const session: TrackingSession = { userId, orderId, watchId: null, simInterval: null, reconnectTimer: null }
   _sessions.set(orderId, session)
 
   setOrderState(orderId, { state: 'tracking', accuracy: 10, error: null, sendCount: 0 })

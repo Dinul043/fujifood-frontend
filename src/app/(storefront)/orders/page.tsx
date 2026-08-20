@@ -161,10 +161,13 @@ export default function OrdersPage() {
 
     async function fetchOrders() {
       try {
-        const { data: me } = await api.get('/auth/me')
-        setUserId(me.id)
         const { data } = await api.get('/orders/my-orders')
         setOrders(data.orders || [])
+        // User lookup is only needed for the live WebSocket; it must not block order history.
+        try {
+          const { data: me } = await api.get('/auth/me')
+          setUserId(me.id)
+        } catch {}
         // Fetch reviewed orders
         try {
           const { data: reviews } = await api.get('/reviews/my-reviews')

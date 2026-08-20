@@ -27,13 +27,18 @@ export function MobileHeader() {
     // Auto-detect on first visit OR every new browser session if no coords
     const hasCoords = !!localStorage.getItem(LOCATION_COORDS_KEY)
     const checkedThisSession = !!sessionStorage.getItem('zone_checked')
+    const forceDetection = sessionStorage.getItem('force_zone_detection') === '1'
+    const detectionStarted = sessionStorage.getItem('zone_detection_started') === '1'
 
-    if (!hasCoords && !checkedThisSession) {
+    if (!detectionStarted && (forceDetection || (!hasCoords && !checkedThisSession))) {
       // No coords at all — auto detect immediately
+      sessionStorage.setItem('zone_detection_started', '1')
+      sessionStorage.removeItem('force_zone_detection')
       sessionStorage.setItem('zone_checked', '1')
       detectLocation()
-    } else if (hasCoords && !checkedThisSession) {
+    } else if (!detectionStarted && hasCoords && !checkedThisSession) {
       // Have coords but new session — silently verify zone
+      sessionStorage.setItem('zone_detection_started', '1')
       sessionStorage.setItem('zone_checked', '1')
       checkZone()
     }

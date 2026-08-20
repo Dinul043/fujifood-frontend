@@ -406,23 +406,23 @@ export default function GoogleMapsTracker({
     }
   }, [staffLocation, mapReady, customerLat, customerLng, animateMarker, fitBounds])
 
-  const h = isMobile ? 200 : 280
+  const h = isMobile ? 250 : 360
 
   return (
-    <div style={{ borderRadius: isMobile ? 10 : 12, overflow: 'hidden', border: '1px solid #E8E4DE', marginBottom: isMobile ? 8 : 12 }}>
+    <div style={{ borderRadius: isMobile ? 16 : 20, overflow: 'hidden', border: '1px solid #E6E0D7', marginBottom: isMobile ? 12 : 16, boxShadow: '0 14px 36px rgba(44, 36, 25, 0.12)', background: '#fff' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '8px 12px' : '10px 16px', background: 'linear-gradient(135deg,#1A1A1A,#2D2D2D)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '11px 14px' : '14px 18px', background: 'linear-gradient(135deg,#171717,#30302D)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ position: 'relative', width: 10, height: 10 }}>
             <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#16A34A', opacity: 0.4, animation: 'trackPulse 1.5s ease-out infinite' }} />
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#16A34A', position: 'absolute' }} />
           </div>
-          <span style={{ fontSize: isMobile ? 11 : 12, fontWeight: 700, color: '#fff', letterSpacing: 0.5 }}>LIVE TRACKING</span>
+          <span style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, color: '#fff', letterSpacing: 1 }}>LIVE TRACKING</span>
           <span style={{ fontSize: isMobile ? 10 : 11, color: '#888', marginLeft: 2 }}>#{orderNumber}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {eta && <span style={{ fontSize: isMobile ? 11 : 12, fontWeight: 700, color: '#C8964B', background: 'rgba(200,150,75,0.15)', padding: '3px 8px', borderRadius: 6 }}>{eta}</span>}
-          {freshness && <span style={{ fontSize: 10, color: '#666' }}>{freshness}</span>}
+          {eta && <span style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, color: '#F5D59B', background: 'rgba(200,150,75,0.18)', padding: '5px 9px', borderRadius: 999 }}>{eta}</span>}
+          {freshness && <span style={{ fontSize: 10, color: '#AAA' }}>{freshness}</span>}
         </div>
       </div>
 
@@ -447,7 +447,7 @@ export default function GoogleMapsTracker({
       </div>
 
       {/* Legend */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 12 : 16, padding: isMobile ? '6px 12px' : '8px 16px', background: '#FAFAF8', borderTop: '1px solid #F0EDE8', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 16, padding: isMobile ? '10px 14px' : '12px 18px', background: '#FFFDF9', borderTop: '1px solid #F0EDE8', flexWrap: 'wrap' }}>
         {[{ color: '#C8964B', label: 'Restaurant' }, { color: '#2563EB', label: 'Delivery address' }, { color: '#16A34A', label: 'Delivery staff' }].map(item => (
           <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.color }} />

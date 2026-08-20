@@ -45,11 +45,37 @@ export default function CheckoutPage() {
   const [geoLoading, setGeoLoading] = useState(false)
   const [deliveryWarning, setDeliveryWarning] = useState('')
   const [locationBlocked, setLocationBlocked] = useState(false)
+  const [checkingAddress, setCheckingAddress] = useState(false)
   const [lat, setLat] = useState<number | null>(null)
   const [lng, setLng] = useState<number | null>(null)
 
   // Saved addresses
   const [savedAddresses, setSavedAddresses] = useState<any[]>([])
+
+  const verifyAddress = async (addressLine = line1, addressCity = city, addressPincode = pincode) => {
+    if (!addressLine.trim() || !addressCity.trim() || addressPincode.length < 5) return true
+    setCheckingAddress(true)
+    try {
+      const { data } = await api.post('/geo/check-delivery-address', {
+        address: addressLine + ' ' + line2,
+        city: addressCity,
+        pincode: addressPincode,
+      })
+      if (!data.deliverable) {
+        setDeliveryWarning(data.message)
+        setLocationBlocked(true)
+        return false
+      }
+      setDeliveryWarning('')
+      setLocationBlocked(false)
+      if (data.lat && data.lng) { setLat(data.lat); setLng(data.lng) }
+      return true
+    } catch {
+      setDeliveryWarning('Could not verify this address. Please check the address and try again.')
+      setLocationBlocked(true)
+      return false
+    } finally { setCheckingAddress(false) }
+  }
 
   useEffect(() => {
     (async () => {
@@ -91,6 +117,8 @@ export default function CheckoutPage() {
     if (locationBlocked) { setLocationBlocked(false); setDeliveryWarning('') }
   }
 
+  const handleAddressBlur = () => { void verifyAddress() }
+
   // Redirect if cart is still empty after the cart has finished loading
   useEffect(() => {
     if (!hydrated) return
@@ -112,14 +140,7 @@ export default function CheckoutPage() {
     setLoading(true)
     try {
       // Step 0: Validate delivery address against radius
-      if (!locationBlocked) {
-        const { data: geoCheck } = await api.post('/geo/check-delivery-address', { address: line1 + ' ' + line2, city, pincode })
-        if (!geoCheck.deliverable) {
-          setError(geoCheck.message)
-          setLoading(false)
-          return
-        }
-      }
+      if (!locationBlocked && !(await verifyAddress())) { setLoading(false); return }
 
       // Step 0b: Save phone if newly provided or updated
       try { await api.patch(`/auth/profile?phone=${encodeURIComponent(customerPhone)}`) } catch {}
@@ -225,6 +246,18 @@ export default function CheckoutPage() {
 
   return (
     <>
+      {locationBlocked && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 250, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(5px)', padding: 20 }}>
+          <div style={{ width: '100%', maxWidth: 400, background: '#141414', border: '1px solid #333', borderRadius: 20, padding: 28, textAlign: 'center', boxShadow: '0 24px 80px rgba(0,0,0,0.35)' }}>
+            <div style={{ width: 54, height: 54, borderRadius: '50%', background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <svg width={24} height={24} fill="none" viewBox="0 0 24 24" stroke="#DC2626" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0 3.75h.008v.008H12v-.008zM4.5 19.5h15a1.5 1.5 0 001.299-2.25l-7.5-13a1.5 1.5 0 00-2.598 0l-7.5 13A1.5 1.5 0 004.5 19.5z" /></svg>
+            </div>
+            <h2 style={{ fontSize: 19, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Outside Delivery Zone</h2>
+            <p style={{ fontSize: 13, color: '#AAA', lineHeight: '20px', marginBottom: 22 }}>{deliveryWarning || 'This address is outside our delivery area.'}</p>
+            <button onClick={() => { setLocationBlocked(false); setDeliveryWarning('') }} style={{ width: '100%', height: 44, border: 'none', borderRadius: 10, background: '#C8964B', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Change Address</button>
+          </div>
+        </div>
+      )}
       {/* Desktop */}
       <div className="hidden md:block" style={{ marginTop: '88px' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', paddingLeft: '48px', paddingRight: '48px', paddingTop: '48px', paddingBottom: '80px' }}>
@@ -251,7 +284,7 @@ export default function CheckoutPage() {
                 {savedAddresses.length > 0 && (
                   <div style={{ marginBottom: 16, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                     {savedAddresses.map(a => (
-                      <button key={a.id} onClick={() => { setLine1(a.address_line1); setLine2(a.address_line2 || ''); setCity(a.city); setState(a.state); setPincode(a.pincode); setLocationBlocked(false); setDeliveryWarning('') }} style={{ height: 32, padding: '0 12px', borderRadius: 8, border: '1px solid #E8E4DE', background: '#fff', color: '#1A1A1A', fontSize: 12, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button key={a.id} onClick={() => { setLine1(a.address_line1); setLine2(a.address_line2 || ''); setCity(a.city); setState(a.state); setPincode(a.pincode); setLocationBlocked(false); setDeliveryWarning(''); void verifyAddress(a.address_line1, a.city, a.pincode) }} style={{ height: 32, padding: '0 12px', borderRadius: 8, border: '1px solid #E8E4DE', background: '#fff', color: '#1A1A1A', fontSize: 12, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                         <svg width={12} height={12} fill="none" viewBox="0 0 24 24" stroke="#C8964B" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 0115 0z" /></svg>
                         {a.label}
                       </button>
@@ -261,7 +294,7 @@ export default function CheckoutPage() {
                 <div className="grid grid-cols-2" style={{ gap: '16px' }}>
                   <div className="col-span-2">
                     <label className="block font-medium text-[#1A1A1A]" style={{ fontSize: '12px', marginBottom: '6px' }}>Address Line 1 *</label>
-                    <input value={line1} onChange={(e) => { setLine1(e.target.value); handleManualEdit() }} placeholder="House/Flat number, Street" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] text-[#1A1A1A] placeholder-[#CCC] outline-none focus:border-[#C8964B] transition-all" style={{ height: '44px', borderRadius: '10px', fontSize: '14px', paddingLeft: '14px' }} />
+                    <input value={line1} onChange={(e) => { setLine1(e.target.value); handleManualEdit() }} onBlur={handleAddressBlur} placeholder="House/Flat number, Street" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] text-[#1A1A1A] placeholder-[#CCC] outline-none focus:border-[#C8964B] transition-all" style={{ height: '44px', borderRadius: '10px', fontSize: '14px', paddingLeft: '14px' }} />
                   </div>
                   <div className="col-span-2">
                     <label className="block font-medium text-[#1A1A1A]" style={{ fontSize: '12px', marginBottom: '6px' }}>Address Line 2</label>
@@ -269,11 +302,11 @@ export default function CheckoutPage() {
                   </div>
                   <div>
                     <label className="block font-medium text-[#1A1A1A]" style={{ fontSize: '12px', marginBottom: '6px' }}>City *</label>
-                    <input value={city} onChange={(e) => setCity(e.target.value)} className="w-full bg-[#FAFAF8] border border-[#E8E4DE] text-[#1A1A1A] outline-none focus:border-[#C8964B] transition-all" style={{ height: '44px', borderRadius: '10px', fontSize: '14px', paddingLeft: '14px' }} />
+                    <input value={city} onChange={(e) => setCity(e.target.value)} onBlur={handleAddressBlur} className="w-full bg-[#FAFAF8] border border-[#E8E4DE] text-[#1A1A1A] outline-none focus:border-[#C8964B] transition-all" style={{ height: '44px', borderRadius: '10px', fontSize: '14px', paddingLeft: '14px' }} />
                   </div>
                   <div>
                     <label className="block font-medium text-[#1A1A1A]" style={{ fontSize: '12px', marginBottom: '6px' }}>Pincode *</label>
-                    <input value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="600001" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] text-[#1A1A1A] placeholder-[#CCC] outline-none focus:border-[#C8964B] transition-all" style={{ height: '44px', borderRadius: '10px', fontSize: '14px', paddingLeft: '14px' }} />
+                    <input value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))} onBlur={handleAddressBlur} placeholder="600001" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] text-[#1A1A1A] placeholder-[#CCC] outline-none focus:border-[#C8964B] transition-all" style={{ height: '44px', borderRadius: '10px', fontSize: '14px', paddingLeft: '14px' }} />
                   </div>
                 </div>
               </div>
@@ -326,8 +359,8 @@ export default function CheckoutPage() {
                 <div style={{ height: '1px', background: '#E8E4DE' }} />
                 <div className="flex justify-between" style={{ fontSize: '20px' }}><span className="font-bold">Total</span><span className="font-bold text-[#C8964B]">&#8377;{grandTotal}</span></div>
               </div>
-              <button onClick={handlePlaceOrder} disabled={loading || locationBlocked} className="w-full font-semibold text-white bg-[#C8964B] hover:bg-[#B5843F] disabled:opacity-60 transition-all" style={{ height: '52px', borderRadius: '12px', fontSize: '15px' }}>
-                {loading ? 'Placing Order...' : locationBlocked ? 'Delivery not available at your location' : 'Place Order'}
+              <button onClick={handlePlaceOrder} disabled={loading || locationBlocked || checkingAddress} className="w-full font-semibold text-white bg-[#C8964B] hover:bg-[#B5843F] disabled:opacity-60 transition-all" style={{ height: '52px', borderRadius: '12px', fontSize: '15px' }}>
+                {loading ? 'Placing Order...' : checkingAddress ? 'Checking delivery area...' : locationBlocked ? 'Delivery not available at your location' : 'Place Order'}
               </button>
             </div>
           </div>
@@ -349,17 +382,17 @@ export default function CheckoutPage() {
             {savedAddresses.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
                 {savedAddresses.map(a => (
-                  <button key={a.id} onClick={() => { setLine1(a.address_line1); setLine2(a.address_line2 || ''); setCity(a.city); setPincode(a.pincode); setLocationBlocked(false); setDeliveryWarning('') }} style={{ height: 28, padding: '0 10px', borderRadius: 6, border: '1px solid #E8E4DE', background: '#fff', color: '#1A1A1A', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>{a.label}</button>
+                  <button key={a.id} onClick={() => { setLine1(a.address_line1); setLine2(a.address_line2 || ''); setCity(a.city); setPincode(a.pincode); setLocationBlocked(false); setDeliveryWarning(''); void verifyAddress(a.address_line1, a.city, a.pincode) }} style={{ height: 28, padding: '0 10px', borderRadius: 6, border: '1px solid #E8E4DE', background: '#fff', color: '#1A1A1A', fontSize: 11, fontWeight: 500, cursor: 'pointer' }}>{a.label}</button>
                 ))}
               </div>
             )}
             {deliveryWarning && <p style={{ fontSize: 11, color: '#DC2626', marginBottom: 12, padding: '8px 12px', borderRadius: 8, background: '#FEF2F2', border: '1px solid #FECACA' }}>{deliveryWarning}</p>}
             <div className="flex flex-col" style={{ gap: '10px' }}>
-              <input value={line1} onChange={(e) => { setLine1(e.target.value); handleManualEdit() }} placeholder="House/Flat, Street *" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '38px', borderRadius: '8px', fontSize: '13px', paddingLeft: '10px' }} />
+              <input value={line1} onChange={(e) => { setLine1(e.target.value); handleManualEdit() }} onBlur={handleAddressBlur} placeholder="House/Flat, Street *" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '38px', borderRadius: '8px', fontSize: '13px', paddingLeft: '10px' }} />
               <input value={line2} onChange={(e) => setLine2(e.target.value)} placeholder="Landmark, Area" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '38px', borderRadius: '8px', fontSize: '13px', paddingLeft: '10px' }} />
               <div className="grid grid-cols-2" style={{ gap: '10px' }}>
-                <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="City" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '38px', borderRadius: '8px', fontSize: '13px', paddingLeft: '10px' }} />
-                <input value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Pincode" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '38px', borderRadius: '8px', fontSize: '13px', paddingLeft: '10px' }} />
+                <input value={city} onChange={(e) => setCity(e.target.value)} onBlur={handleAddressBlur} placeholder="City" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '38px', borderRadius: '8px', fontSize: '13px', paddingLeft: '10px' }} />
+                <input value={pincode} onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))} onBlur={handleAddressBlur} placeholder="Pincode" className="w-full bg-[#FAFAF8] border border-[#E8E4DE] outline-none focus:border-[#C8964B]" style={{ height: '38px', borderRadius: '8px', fontSize: '13px', paddingLeft: '10px' }} />
               </div>
             </div>
           </div>
@@ -386,7 +419,7 @@ export default function CheckoutPage() {
           </div>
           <div className="bg-white" style={{ padding: '20px', borderRadius: '16px', border: '1px solid #EEEAE5' }}>
             <div className="flex justify-between" style={{ fontSize: '16px', marginBottom: '16px' }}><span className="font-bold">Total</span><span className="font-bold text-[#C8964B]">&#8377;{grandTotal}</span></div>
-            <button onClick={handlePlaceOrder} disabled={loading || locationBlocked} className="w-full font-semibold text-white bg-[#C8964B] disabled:opacity-60" style={{ height: '48px', borderRadius: '12px', fontSize: '14px' }}>
+            <button onClick={handlePlaceOrder} disabled={loading || locationBlocked || checkingAddress} className="w-full font-semibold text-white bg-[#C8964B] disabled:opacity-60" style={{ height: '48px', borderRadius: '12px', fontSize: '14px' }}>
               {loading ? 'Placing...' : locationBlocked ? 'Not available at your location' : 'Place Order'}
             </button>
           </div>

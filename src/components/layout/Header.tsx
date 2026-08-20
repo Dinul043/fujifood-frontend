@@ -42,25 +42,9 @@ export function Header() {
   const [savedAddresses, setSavedAddresses] = useState<any[]>([])
   const [outOfRange, setOutOfRange] = useState(false)
   const [outOfRangeMsg, setOutOfRangeMsg] = useState('')
-  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0)
   const dropRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const syncUnreadCount = () => {
-      if (typeof window === 'undefined') return
-      try {
-        const saved: Array<{ read?: boolean }> = JSON.parse(localStorage.getItem('fujifood_customer_notifications') || '[]')
-        setUnreadNotificationCount(saved.filter(item => !item.read).length)
-      } catch {
-        setUnreadNotificationCount(0)
-      }
-    }
-    syncUnreadCount()
-
-    const onUpdate = () => syncUnreadCount()
-    window.addEventListener('fujifood-notification-update', onUpdate)
-    window.addEventListener('fujifood-clear-notifications', onUpdate)
-
     const isAuth = document.cookie.includes('fujifood_access_token')
     setIsLoggedIn(isAuth)
 
@@ -72,13 +56,18 @@ export function Header() {
     // Uses sessionStorage so it re-checks every new browser session
     const hasCoords = !!localStorage.getItem(LOCATION_COORDS_KEY)
     const checkedThisSession = !!sessionStorage.getItem('zone_checked')
+    const forceDetection = sessionStorage.getItem('force_zone_detection') === '1'
+    const detectionStarted = sessionStorage.getItem('zone_detection_started') === '1'
 
-    if (!hasCoords && !checkedThisSession) {
+    if (!detectionStarted && (forceDetection || (!hasCoords && !checkedThisSession))) {
       // No coords at all — auto detect immediately
+      sessionStorage.setItem('zone_detection_started', '1')
+      sessionStorage.removeItem('force_zone_detection')
       sessionStorage.setItem('zone_checked', '1')
       detectLocation()
-    } else if (hasCoords && !checkedThisSession) {
+    } else if (!detectionStarted && hasCoords && !checkedThisSession) {
       // Have coords but new session — silently verify zone
+      sessionStorage.setItem('zone_detection_started', '1')
       sessionStorage.setItem('zone_checked', '1')
       checkStoredCoords(setOutOfRange, setOutOfRangeMsg)
     }
@@ -104,8 +93,6 @@ export function Header() {
     return () => {
       document.removeEventListener('mousedown', handleClick)
       window.removeEventListener('addresses-updated', refreshAddresses)
-      window.removeEventListener('fujifood-notification-update', onUpdate)
-      window.removeEventListener('fujifood-clear-notifications', onUpdate)
     }
   }, [])
 
@@ -330,20 +317,6 @@ export function Header() {
             </span>
           </a>
 
-          {/* Unread order badge only — keep it minimal next to cart */}
-          <a
-            href="/orders"
-            className="relative text-[#999] hover:text-white transition-colors duration-200"
-            aria-label="View orders"
-            style={{ marginRight: '18px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: '12px' }}
-          >
-            {unreadNotificationCount > 0 && (
-              <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-[#DC2626] text-white text-[10px] font-bold px-[5px] ring-2 ring-[#141414]">
-                {Math.min(unreadNotificationCount, 9)}
-              </span>
-            )}
-          </a>
-
           {/* Login / Sign out */}
           {isLoggedIn && (
             <a href="/profile" className="text-[#999] hover:text-white transition-colors duration-200" aria-label="Profile" style={{ marginRight: '16px' }}>
@@ -365,6 +338,7 @@ export function Header() {
                 localStorage.removeItem(LOCATION_COORDS_KEY)
                 localStorage.removeItem(LOCATION_CHECKED_KEY)
                 sessionStorage.removeItem('zone_checked')
+                sessionStorage.removeItem('zone_detection_started')
                 window.location.href = '/'
               }
             }}

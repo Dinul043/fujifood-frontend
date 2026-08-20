@@ -47,6 +47,10 @@ export default function LoginPage() {
   const afterLogin = async (isAdmin = false) => {
     if (isAdmin) { window.location.href = '/manage'; return }
     await syncGuestCart()
+    // Re-check the customer's actual location after every login/signup.
+    sessionStorage.removeItem('zone_checked')
+    sessionStorage.removeItem('zone_detection_started')
+    sessionStorage.setItem('force_zone_detection', '1')
     window.location.href = returnTo
   }
 

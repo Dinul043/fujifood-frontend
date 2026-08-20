@@ -28,7 +28,6 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState<number | null>(null)
   const [deliveryStaff, setDeliveryStaff] = useState<DeliveryStaff[]>([])
-  const [isOwner, setIsOwner] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<number | null>(null)
   const [currentUserRole, setCurrentUserRole] = useState<string>('')
   const [restaurantCoords, setRestaurantCoords] = useState<{ lat: number; lng: number } | null>(null)
@@ -111,7 +110,6 @@ export default function OrdersPage() {
       try {
         const { data: me } = await api.get('/auth/me')
         const isRestaurantAdmin = me.role === 'restaurant_admin'
-        setIsOwner(Boolean(me.is_owner))
         if (isRestaurantAdmin) {
           try {
             const { data: staff } = await api.get('/delivery/staff-list')
@@ -147,7 +145,11 @@ export default function OrdersPage() {
   const updateStatus = async (orderId: number, newStatus: string) => {
     setUpdating(orderId)
     try {
-      await api.patch(`/orders/manage/${orderId}/status`, { status: newStatus })
+      if (newStatus === 'delivered' && currentUserRole === 'delivery_staff') {
+        await api.post(`/delivery/orders/${orderId}/delivered`)
+      } else {
+        await api.patch(`/orders/manage/${orderId}/status`, { status: newStatus })
+      }
       // Auto-stop tracking when delivered
       if (newStatus === 'delivered') stopTracking(orderId)
       await fetchOrders()
@@ -482,7 +484,7 @@ export default function OrdersPage() {
               )}
 
               {/* ── Self-assign: staff can take a delivery ── */}
-              {!isOwner && order.status === 'ready' && !order.assigned_staff_id && (
+              {currentUserRole === 'delivery_staff' && order.status === 'ready' && !order.assigned_staff_id && (
                 <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 10, border: '1px solid #BFDBFE', background: '#EFF6FF' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                     <div>
@@ -501,7 +503,7 @@ export default function OrdersPage() {
               )}
 
               {/* My assignment indicator for non-owner */}
-              {!isOwner && order.assigned_staff_id === currentUserId && order.status === 'ready' && (
+              {currentUserRole === 'delivery_staff' && order.assigned_staff_id === currentUserId && order.status === 'ready' && (
                 <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 10, border: '1px solid #BBF7D0', background: '#F0FDF4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <svg width={14} height={14} fill="none" viewBox="0 0 24 24" stroke="#16A34A" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -529,7 +531,7 @@ export default function OrdersPage() {
               )}
 
               {/* ── Live GPS Tracking Button (staff assigned to this order) ── */}
-              {!isOwner && order.assigned_staff_id === currentUserId && order.status === 'ready' && (() => {
+              {currentUserRole === 'delivery_staff' && order.assigned_staff_id === currentUserId && order.status === 'ready' && (() => {
                 const ts = getStatus(order.id)
                 const isTrackingThis = ts.state === 'tracking'
                 const isRequestingThis = ts.state === 'requesting'
@@ -607,7 +609,7 @@ export default function OrdersPage() {
               })()}
 
               {/* ── Assign Staff Section (owner + active orders) ── */}
-              {isOwner && ['confirmed', 'preparing', 'ready'].includes(order.status) && (                <div style={{ marginBottom: 12, padding: '12px 12px', borderRadius: 10, border: '1px dashed #E8C987', background: '#FFFDF5' }}>
+              {currentUserRole === 'restaurant_admin' && ['confirmed', 'preparing', 'ready'].includes(order.status) && (                <div style={{ marginBottom: 12, padding: '12px 12px', borderRadius: 10, border: '1px dashed #E8C987', background: '#FFFDF5' }}>
                   {deliveryStaff.length > 0 ? (
                     <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>

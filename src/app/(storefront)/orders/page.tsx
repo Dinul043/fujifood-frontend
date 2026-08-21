@@ -93,6 +93,7 @@ export default function OrdersPage() {
   const [newOrder, setNewOrder] = useState<string | null>(null)
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
+  const [ordersError, setOrdersError] = useState('')
   const [userId, setUserId] = useState<number | null>(null)
   const [cancelModal, setCancelModal] = useState<{ id: number; orderNumber: string; items: string } | null>(null)
   const [cancelError, setCancelError] = useState('')
@@ -160,6 +161,8 @@ export default function OrdersPage() {
     }
 
     async function fetchOrders() {
+      setLoading(true)
+      setOrdersError('')
       try {
         const { data } = await api.get('/orders/my-orders')
         setOrders(data.orders || [])
@@ -207,7 +210,12 @@ export default function OrdersPage() {
             } catch {}
           })
         )
-      } catch {}
+      } catch (error: any) {
+        const message = error?.response?.data?.detail || error?.message || 'Could not load your orders.'
+        console.error('[Orders] Failed to load customer orders:', error)
+        setOrdersError(message)
+        setOrders([])
+      }
       finally { setLoading(false) }
     }
     fetchOrders()
@@ -273,6 +281,12 @@ export default function OrdersPage() {
           {loading ? (
             <div className="animate-pulse flex flex-col" style={{ gap: '16px' }}>
               {Array.from({ length: 3 }).map((_, i) => (<div key={i} className="bg-white" style={{ height: '120px', borderRadius: '16px', border: '1px solid #EEEAE5' }} />))}
+            </div>
+          ) : ordersError ? (
+            <div className="text-center" style={{ padding: '80px 0' }}>
+              <p className="font-semibold text-[#1A1A1A]" style={{ fontSize: '18px', marginBottom: '8px' }}>Orders could not be loaded</p>
+              <p className="text-[#888]" style={{ fontSize: '13px', marginBottom: '20px' }}>{ordersError}</p>
+              <button onClick={() => window.location.reload()} style={{ height: 40, padding: '0 18px', border: 'none', borderRadius: 10, background: '#C8964B', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Try Again</button>
             </div>
           ) : orders.length === 0 ? (
             <div className="text-center" style={{ padding: '80px 0' }}>
@@ -430,7 +444,13 @@ export default function OrdersPage() {
               <p className="font-semibold text-[#16A34A]" style={{ fontSize: '13px' }}>Order #{newOrder} placed!</p>
             </div>
           )}
-          {loading ? <div className="animate-pulse"><div className="bg-[#F0EDE8]" style={{ height: '100px', borderRadius: '12px', marginBottom: '12px' }} /><div className="bg-[#F0EDE8]" style={{ height: '100px', borderRadius: '12px' }} /></div> : orders.length === 0 ? (
+          {loading ? <div className="animate-pulse"><div className="bg-[#F0EDE8]" style={{ height: '100px', borderRadius: '12px', marginBottom: '12px' }} /><div className="bg-[#F0EDE8]" style={{ height: '100px', borderRadius: '12px' }} /></div> : ordersError ? (
+            <div className="text-center" style={{ padding: '60px 0' }}>
+              <p className="font-semibold text-[#1A1A1A]" style={{ fontSize: '16px', marginBottom: '8px' }}>Orders could not be loaded</p>
+              <p className="text-[#888]" style={{ fontSize: '12px', marginBottom: '16px' }}>{ordersError}</p>
+              <button onClick={() => window.location.reload()} style={{ height: 38, padding: '0 16px', border: 'none', borderRadius: 9, background: '#C8964B', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Try Again</button>
+            </div>
+          ) : orders.length === 0 ? (
             <div className="text-center" style={{ padding: '60px 0' }}>
               <p className="font-semibold text-[#1A1A1A]" style={{ fontSize: '16px', marginBottom: '8px' }}>No orders yet</p>
               <a href="/menu" className="inline-flex items-center justify-center font-semibold text-white bg-[#C8964B]" style={{ height: '40px', paddingLeft: '24px', paddingRight: '24px', borderRadius: '10px', fontSize: '13px', marginTop: '16px' }}>Browse Menu</a>

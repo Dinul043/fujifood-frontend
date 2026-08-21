@@ -44,8 +44,11 @@ export default function LoginPage() {
     if (rt) setReturnTo(rt)
   }, [])
 
-  const afterLogin = async (isAdmin = false) => {
-    if (isAdmin) { window.location.href = '/manage'; return }
+  const afterLogin = async (role?: string) => {
+    if (role === 'restaurant_admin' || role === 'delivery_staff') {
+      window.location.href = '/manage'
+      return
+    }
     await syncGuestCart()
     // Re-check the customer's actual location after every login/signup.
     sessionStorage.removeItem('zone_checked')
@@ -84,7 +87,7 @@ export default function LoginPage() {
       // Try email+password login (uses the same endpoint but with password)
       const { data } = await api.post('/auth/customer/login', { email, password, tenant_slug: TENANT_SLUG })
       setTokens(data.access_token, data.refresh_token)
-      await afterLogin()
+      await afterLogin(data.user?.role)
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Invalid email or password')
     } finally { setLoading(false) }
@@ -100,7 +103,7 @@ export default function LoginPage() {
       if (tab === 'signup') {
         setStep('complete')
       } else {
-        await afterLogin()
+        await afterLogin(data.user?.role)
       }
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Invalid OTP')
@@ -129,7 +132,7 @@ export default function LoginPage() {
     try {
       const { data } = await api.post('/auth/admin/login', { phone, password, tenant_slug: TENANT_SLUG })
       setTokens(data.access_token, data.refresh_token)
-      await afterLogin(true)
+      await afterLogin(data.user?.role)
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Invalid credentials')
     } finally { setLoading(false) }
@@ -225,7 +228,7 @@ export default function LoginPage() {
           </>
         )}
 
-        {/* ─── Admin Form ──────────────────────────────────── */}
+        {/* ─── Restaurant and delivery staff form ──────────── */}
         {mode === 'admin' && (
           <>
             <div style={{ marginBottom: '12px' }}>
@@ -250,7 +253,7 @@ export default function LoginPage() {
             </button>
           )}
           <button onClick={() => { setMode(mode === 'customer' ? 'admin' : 'customer'); setError(''); setStep('form') }} className="text-[#C8964B] hover:underline" style={{ fontSize: '12px', fontWeight: 500 }}>
-            {mode === 'admin' ? 'Customer? Sign in with OTP' : 'Restaurant Admin?'}
+            {mode === 'admin' ? 'Customer? Sign in with OTP' : 'Restaurant / Delivery Staff?'}
           </button>
         </div>
       </div>

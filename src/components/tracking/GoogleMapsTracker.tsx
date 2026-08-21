@@ -137,9 +137,23 @@ export default function GoogleMapsTracker({
         center,
         zoom,
         mapTypeControl: true,
+        mapTypeControlOptions: { style: 1, position: 2 },
         fullscreenControl: true,
+        zoomControl: false,
         streetViewControl: false,
+        mapId: process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID?.trim() || undefined,
         styles: [
+          { elementType: 'geometry', stylers: [{ color: '#f4f1ec' }] },
+          { elementType: 'labels.text.fill', stylers: [{ color: '#6f6a62' }] },
+          { elementType: 'labels.text.stroke', stylers: [{ color: '#f4f1ec' }, { weight: 2 }] },
+          { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#d8d0c5' }] },
+          { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#e9efe8' }] },
+          { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#eee9df' }] },
+          { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#857b6d' }] },
+          { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#fffdf9' }] },
+          { featureType: 'road', elementType: 'geometry.stroke', stylers: [{ color: '#ded7cc' }] },
+          { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#e7dfd2' }] },
+          { featureType: 'transit', elementType: 'geometry', stylers: [{ color: '#e4ded4' }] },
           {
             featureType: 'poi',
             elementType: 'labels',
@@ -218,37 +232,16 @@ export default function GoogleMapsTracker({
     }
   }, [restaurantLat, restaurantLng, customerLat, customerLng])
 
-  // Create custom marker icon
-  const createMarkerIcon = (color: string, svgPath: string): any => {
-    const canvas = document.createElement('canvas')
-    canvas.width = 44
-    canvas.height = 44
-    const ctx = canvas.getContext('2d')!
-
-    // Draw circle background
-    ctx.fillStyle = color
-    ctx.beginPath()
-    ctx.arc(22, 22, 18, 0, Math.PI * 2)
-    ctx.fill()
-
-    // Draw border
-    ctx.strokeStyle = '#fff'
-    ctx.lineWidth = 3
-    ctx.stroke()
-
-    // Add shadow
-    ctx.shadowColor = `rgba(0, 0, 0, 0.3)`
-    ctx.shadowBlur = 8
-    ctx.shadowOffsetX = 0
-    ctx.shadowOffsetY = 2
-
+  // Crisp SVG markers stay sharp on high-density screens.
+  const createMarkerIcon = (color: string, glyph: string, size = 42): any => {
     const L = getGoogleMapsAPI()
     if (!L) return null
 
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 3}" fill="${color}" stroke="#fff" stroke-width="3"/>${glyph}</svg>`
     return {
-      url: canvas.toDataURL(),
-      scaledSize: new L.Size(44, 44),
-      anchor: new L.Point(22, 22),
+      url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+      scaledSize: new L.Size(size, size),
+      anchor: new L.Point(size / 2, size / 2),
       origin: new L.Point(0, 0),
     }
   }
@@ -263,14 +256,7 @@ export default function GoogleMapsTracker({
     // Restaurant marker
     if (restaurantLat && restaurantLng) {
       if (restaurantMarkerRef.current) restaurantMarkerRef.current.setMap(null)
-      const icon = {
-        path: L.SymbolPath.CIRCLE,
-        scale: 12,
-        fillColor: '#C8964B',
-        fillOpacity: 1,
-        strokeColor: '#fff',
-        strokeWeight: 3,
-      }
+      const icon = createMarkerIcon('#B98235', '<path d="M21 12.2a5.1 5.1 0 1 0-10.2 0c0 4.2 5.1 8.8 5.1 8.8s5.1-4.6 5.1-8.8Z" fill="none" stroke="#fff" stroke-width="2"/><circle cx="15.9" cy="12.2" r="1.8" fill="#fff"/>')
       restaurantMarkerRef.current = new L.Marker({
         position: { lat: restaurantLat, lng: restaurantLng },
         map: mapRef.current,
@@ -288,14 +274,7 @@ export default function GoogleMapsTracker({
     // Customer marker
     if (customerLat && customerLng) {
       if (customerMarkerRef.current) customerMarkerRef.current.setMap(null)
-      const icon = {
-        path: L.SymbolPath.CIRCLE,
-        scale: 12,
-        fillColor: '#2563EB',
-        fillOpacity: 1,
-        strokeColor: '#fff',
-        strokeWeight: 3,
-      }
+      const icon = createMarkerIcon('#2563EB', '<path d="M21 12.2a5.1 5.1 0 1 0-10.2 0c0 4.2 5.1 8.8 5.1 8.8s5.1-4.6 5.1-8.8Z" fill="none" stroke="#fff" stroke-width="2"/><circle cx="15.9" cy="12.2" r="1.8" fill="#fff"/>')
       customerMarkerRef.current = new L.Marker({
         position: { lat: customerLat, lng: customerLng },
         map: mapRef.current,
@@ -359,14 +338,7 @@ export default function GoogleMapsTracker({
     setFreshness('Just now')
     if (customerLat && customerLng) setEta(calcEta({ lat, lng }, { lat: customerLat, lng: customerLng }))
 
-    const icon = {
-      path: L.SymbolPath.CIRCLE,
-      scale: 14,
-      fillColor: '#16A34A',
-      fillOpacity: 1,
-      strokeColor: '#fff',
-      strokeWeight: 3,
-    }
+    const icon = createMarkerIcon('#159447', '<path d="M11 16.5h10M12 16.5l1.3-5.5h5.5l2.2 5.5M14 11V8.7h4.4l2.2 2.3M14.8 18.7a1.7 1.7 0 1 1-3.4 0 1.7 1.7 0 0 1 3.4 0Zm8 0a1.7 1.7 0 1 1-3.4 0 1.7 1.7 0 0 1 3.4 0Z" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>', 52)
 
     if (staffMarkerRef.current) {
       const prev = prevStaffPos.current ?? { lat, lng }
@@ -417,8 +389,8 @@ export default function GoogleMapsTracker({
             <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#16A34A', opacity: 0.4, animation: 'trackPulse 1.5s ease-out infinite' }} />
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#16A34A', position: 'absolute' }} />
           </div>
-          <span style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, color: '#fff', letterSpacing: 1 }}>LIVE TRACKING</span>
-          <span style={{ fontSize: isMobile ? 10 : 11, color: '#888', marginLeft: 2 }}>#{orderNumber}</span>
+          <span style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, color: '#fff', letterSpacing: 1 }}>LIVE DELIVERY</span>
+          <span style={{ fontSize: isMobile ? 10 : 11, color: '#A9A29A', marginLeft: 2 }}>#{orderNumber}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {eta && <span style={{ fontSize: isMobile ? 10 : 11, fontWeight: 700, color: '#F5D59B', background: 'rgba(200,150,75,0.18)', padding: '5px 9px', borderRadius: 999 }}>{eta}</span>}
@@ -448,7 +420,7 @@ export default function GoogleMapsTracker({
 
       {/* Legend */}
       <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 16, padding: isMobile ? '10px 14px' : '12px 18px', background: '#FFFDF9', borderTop: '1px solid #F0EDE8', flexWrap: 'wrap' }}>
-        {[{ color: '#C8964B', label: 'Restaurant' }, { color: '#2563EB', label: 'Delivery address' }, { color: '#16A34A', label: 'Delivery staff' }].map(item => (
+        {[{ color: '#B98235', label: 'Restaurant' }, { color: '#2563EB', label: 'Current location' }, { color: '#159447', label: 'Delivery partner' }].map(item => (
           <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.color }} />
             <span style={{ fontSize: 10, color: '#888' }}>{item.label}</span>

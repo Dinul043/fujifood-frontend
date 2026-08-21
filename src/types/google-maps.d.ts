@@ -58,8 +58,11 @@ declare global {
         center?: LatLngLiteral | LatLng
         zoom?: number
         mapTypeControl?: boolean
+        mapTypeControlOptions?: { style?: number; position?: number }
         fullscreenControl?: boolean
+        zoomControl?: boolean
         streetViewControl?: boolean
+        mapId?: string
         styles?: MapTypeStyle[]
       }
 

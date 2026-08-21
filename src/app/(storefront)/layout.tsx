@@ -49,7 +49,15 @@ export default function StorefrontLayout({ children }: { children: React.ReactNo
   useEffect(() => {
     (async () => {
       try { const { data } = await api.get('/restaurants/storefront/a2b'); setRestaurant(data) } catch {}
-      try { const { data } = await api.get('/auth/me'); setUserId(data.id) } catch {}
+      try {
+        const { data } = await api.get('/auth/me')
+        // Staff and admin should never land on the storefront
+        if (data.role === 'restaurant_admin' || data.role === 'delivery_staff') {
+          window.location.href = '/manage'
+          return
+        }
+        setUserId(data.id)
+      } catch {}
     })()
   }, [])
 

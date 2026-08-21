@@ -17,15 +17,33 @@ export default function CheckoutPage() {
 
   // Customer phone check
   const [customerPhone, setCustomerPhone] = useState('')
+  const [addressLoadError, setAddressLoadError] = useState('')
 
-  // Load user phone on mount
+  // Load user info + saved addresses in one go
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await api.get('/auth/me')
-        // Only set phone if it's a real phone number (not their email)
-        if (data.phone && data.phone !== data.email && /^\d{10}$/.test(data.phone)) {
-          setCustomerPhone(data.phone)
+        const { data: me } = await api.get('/auth/me')
+        // Non-customer (admin/staff) should not be on checkout
+        if (me.role !== 'customer') {
+          window.location.href = '/manage'
+          return
+        }
+        // Set phone if valid
+        if (me.phone && me.phone !== me.email && /^\d{10}$/.test(me.phone)) {
+          setCustomerPhone(me.phone)
+        }
+        // Load saved addresses
+        try {
+          setAddressLoadError('')
+          const { data } = await api.get('/addresses/')
+          setSavedAddresses(data || [])
+        } catch (addrErr: any) {
+          const status = (addrErr as any)?.response?.status
+          if (status === 401 || status === 403) {
+            setAddressLoadError('Please sign in with your customer account to load saved addresses.')
+          }
+          // Other errors silently ignored — don't block checkout
         }
       } catch {}
     })()
@@ -77,14 +95,7 @@ export default function CheckoutPage() {
     } finally { setCheckingAddress(false) }
   }
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await api.get('/addresses/')
-        setSavedAddresses(data || [])
-      } catch {}
-    })()
-  }, [])
+  // Saved addresses loaded in the combined useEffect above
 
   const handleUseLocation = () => {
     if (!navigator.geolocation) { setError('Geolocation not supported'); return }
@@ -281,6 +292,11 @@ export default function CheckoutPage() {
                 </div>
                 {deliveryWarning && <div style={{ marginBottom: '16px', padding: '10px 14px', borderRadius: 10, background: '#FEF2F2', border: '1px solid #FECACA' }}><p style={{ fontSize: 12, color: '#DC2626', fontWeight: 500 }}>{deliveryWarning}</p><p style={{ fontSize: 11, color: '#888', marginTop: 4 }}>If you&apos;re ordering for someone within our delivery area, clear your location and type the delivery address manually.</p></div>}
                 {/* Saved addresses */}
+                {addressLoadError && (
+                  <div style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 8, background: '#FFF7ED', border: '1px solid #FED7AA' }}>
+                    <p style={{ fontSize: 12, color: '#92400E' }}>{addressLoadError}</p>
+                  </div>
+                )}
                 {savedAddresses.length > 0 && (
                   <div style={{ marginBottom: 16, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                     {savedAddresses.map(a => (
@@ -379,6 +395,11 @@ export default function CheckoutPage() {
               {geoLoading ? 'Detecting...' : 'Use My Location'}
             </button>
             {/* Saved address buttons */}
+            {addressLoadError && (
+              <div style={{ marginBottom: 8, padding: '6px 10px', borderRadius: 6, background: '#FFF7ED', border: '1px solid #FED7AA' }}>
+                <p style={{ fontSize: 11, color: '#92400E' }}>{addressLoadError}</p>
+              </div>
+            )}
             {savedAddresses.length > 0 && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
                 {savedAddresses.map(a => (
